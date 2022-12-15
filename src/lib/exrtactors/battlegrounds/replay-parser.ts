@@ -1,5 +1,15 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { BlockType, CardType, GameTag, MetaTags, PlayState, Step, Zone } from '@firestone-hs/reference-data';
+import {
+	AllCardsService,
+	BlockType,
+	CardIds,
+	CardType,
+	GameTag,
+	MetaTags,
+	PlayState,
+	Step,
+	Zone,
+} from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { Map } from 'immutable';
 import { BgsBoard, Entity } from 'src/public-api';
@@ -16,6 +26,7 @@ import { normalizeHeroCardId } from './utils';
 
 export const reparseReplay = (
 	replay: Replay,
+	allCards: AllCardsService,
 ): {
 	boardHistory: readonly BgsBoard[];
 	rerollsOverTurn: readonly NumericTurnInfo[];
@@ -32,14 +43,13 @@ export const reparseReplay = (
 	totalMinionsDamageTaken: { [cardId: string]: number };
 	totalEnemyMinionsKilled: number;
 	totalEnemyHeroesKilled: number;
-
 } => {
 	if (!replay) {
 		return {} as any;
 	}
 	const opponentPlayerElement = replay.replay
 		.findall('.//Player')
-		.find(player => player.get('isMainPlayer') === 'false');
+		.find((player) => player.get('isMainPlayer') === 'false');
 	const opponentPlayerEntityId = opponentPlayerElement.get('id');
 	// console.log('mainPlayerEntityId', opponentPlayerEntityId);
 	const structure: ParsingStructure = {
@@ -61,7 +71,7 @@ export const reparseReplay = (
 		mainEnchantEntityIds: [],
 		mainPlayerHeroPowerIds: [],
 		mainPlayerHeroPowersForTurn: 0,
-		damageToEnemyHeroForTurn: { 
+		damageToEnemyHeroForTurn: {
 			enemyHeroCardId: undefined,
 			value: 0,
 		},
@@ -88,23 +98,27 @@ export const reparseReplay = (
 	if (!mainPlayerEntity) {
 		const players = replay.replay.findall('.//Player');
 		for (const player of players) {
-			if (player.get('accountHi') !== "0") {
+			if (player.get('accountHi') !== '0') {
 				mainPlayerEntity = player;
 			}
 		}
 	}
 	const mainPlayerEntityId: string = mainPlayerEntity.get('id');
-	// console.debug('mainPlayerEntityId', mainPlayerEntityId);
-	const playerCardIds: readonly string[] = [
-		...new Set(playerEntities.map(entity => normalizeHeroCardId(entity.get('cardID')))),
-	] as readonly string[];
-	for (const playerCardId of playerCardIds) {
-		structure.playerHps[playerCardId] = playerCardId === 'TB_BaconShop_HERO_34' ? 55 : 40;
+	for (const entity of playerEntities) {
+		const playerCardId = normalizeHeroCardId(entity.get('cardID'), allCards);
+		if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBobBattlegrounds) {
+			continue;
+		}
+		structure.playerHps[playerCardId] = {
+			startingHp: parseInt(entity.find(`Tag[@tag="${GameTag.HEALTH}"]`).get('value')),
+			damage: 0,
+			armor: 0,
+		};
 	}
 	// console.log('mainPlayerId', replay.mainPlayerId);
 
 	const opponentHeroEntityIds = extractHeroEntityIds(replay, replay.opponentPlayerId);
-	
+
 	const startingTurnStr = replay.replay.find('.//GameEntity').find(`.//Tag[@tag='${GameTag.TURN}']`)?.get('value');
 	const startingTurn = startingTurnStr ? parseInt(startingTurnStr) : 0;
 
@@ -115,15 +129,15 @@ export const reparseReplay = (
 		null,
 		{ currentTurn: startingTurn },
 		[
-			compositionForTurnParse(structure),
+			compositionForTurnParse(structure, allCards),
 			rerollsForTurnParse(structure),
 			freezesForTurnParse(structure),
 			mainPlayerHeroPowerForTurnParse(structure, replay.mainPlayerId),
 			coinsWastedForTurnParse(structure, mainPlayerEntityId),
 			minionsSoldForTurnParse(structure),
 			minionsBoughtForTurnParse(structure),
-			hpForTurnParse(structure, playerEntities),
-			leaderboardForTurnParse(structure, playerEntities),
+			hpForTurnParse(structure, playerEntities, allCards),
+			leaderboardForTurnParse(structure, playerEntities, allCards),
 			damageDealtByMinionsParse(structure, replay),
 			damageDealtToEnemyHeroParse(structure, replay, opponentHeroEntityIds),
 			wentFirstInBattleForTurnParse(structure, replay.mainPlayerId),
@@ -140,19 +154,23 @@ export const reparseReplay = (
 			// Order is important, because we want to first populate the leaderboard (for which it's easy
 			// to filter out the mulligan choices) and use this to iterate on the other elements
 			leaderboardForTurnPopulate(structure, replay),
-			hpForTurnPopulate(structure, replay),
+			hpForTurnPopulate(structure, replay, allCards),
 			damageDealtToEnemyHeroPopulate(structure, replay),
 			totalStatsForTurnPopulate(structure, replay),
 			wentFirstInBattleForTurnPopulate(structure, replay),
 		],
 	);
 
-	const boardHistory = structure.boardOverTurnDetailed.map(
-		(board, turn) => ({
-			turn: turn,
-			board: board,
-		} as BgsBoard)
-	).valueSeq().toArray();
+	const boardHistory = structure.boardOverTurnDetailed
+		.map(
+			(board, turn) =>
+				({
+					turn: turn,
+					board: board,
+				} as BgsBoard),
+		)
+		.valueSeq()
+		.toArray();
 	const rerollsOverTurn: readonly NumericTurnInfo[] = structure.rerollOverTurn
 		.map(
 			(rerolls, turn: number) =>
@@ -193,7 +211,7 @@ export const reparseReplay = (
 		)
 		.valueSeq()
 		.toArray();
-		// We remove the last element of the array, as it gives you the coins present on your end-game screen
+	// We remove the last element of the array, as it gives you the coins present on your end-game screen
 	coinsWastedOverTurn.pop();
 	const minionsSoldOverTurn: readonly NumericTurnInfo[] = structure.minionsSoldOverTurn
 		.map(
@@ -235,15 +253,15 @@ export const reparseReplay = (
 		})
 		.valueSeq()
 		.toArray();
-		const damageToEnemyHeroOverTurn: readonly ComplexTurnInfo<ValueHeroInfo>[] = structure.damageToEnemyHeroOverTurn
-			.map((stats: ValueHeroInfo, turn: number) => {
-				return {
-					turn: turn,
-					value: stats,
-				} as ComplexTurnInfo<ValueHeroInfo>;
-			})
-			.valueSeq() 
-			.toArray();
+	const damageToEnemyHeroOverTurn: readonly ComplexTurnInfo<ValueHeroInfo>[] = structure.damageToEnemyHeroOverTurn
+		.map((stats: ValueHeroInfo, turn: number) => {
+			return {
+				turn: turn,
+				value: stats,
+			} as ComplexTurnInfo<ValueHeroInfo>;
+		})
+		.valueSeq()
+		.toArray();
 	const totalEnemyMinionsKilled = extractTotalMinionDeaths(replay).opponent;
 	const totalEnemyHeroesKilled = extractNumberOfKilledEnemyHeroes(replay);
 	// const totalDamageDealtToEnemyHeroes = extractTotalDamageDealtToEnemyHero(replay).opponent;
@@ -268,55 +286,100 @@ export const reparseReplay = (
 	};
 };
 
-const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly Element[]) => {
-	return element => {
+const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly Element[], allCards: AllCardsService) => {
+	return (element) => {
 		if (
 			element.tag === 'TagChange' &&
 			parseInt(element.get('value')) > 0 &&
 			parseInt(element.get('tag')) === GameTag.DAMAGE &&
-			playerEntities.map(entity => entity.get('id')).indexOf(element.get('entity')) !== -1
+			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
 		) {
-			const playerCardId = normalizeHeroCardId(playerEntities
-				.find(entity => normalizeHeroCardId(entity.get('id')) === normalizeHeroCardId(element.get('entity')))
-				.get('cardID'));
-			structure.playerHps[playerCardId] =
-				// Patchwerk is a special case
-				Math.max(0, (playerCardId === 'TB_BaconShop_HERO_34' ? 55 : 40) - parseInt(element.get('value')));
+			const playerCardId = normalizeHeroCardId(
+				playerEntities
+					.find(
+						(entity) =>
+							normalizeHeroCardId(entity.get('id'), allCards) ===
+							normalizeHeroCardId(element.get('entity'), allCards),
+					)
+					.get('cardID'),
+				allCards,
+			);
+
+			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBobBattlegrounds) {
+				structure.playerHps[playerCardId].damage = parseInt(element.get('value'));
+			}
+		}
+
+		if (
+			element.tag === 'TagChange' &&
+			parseInt(element.get('value')) > 0 &&
+			parseInt(element.get('tag')) === GameTag.ARMOR &&
+			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
+		) {
+			const playerCardId = normalizeHeroCardId(
+				playerEntities
+					.find(
+						(entity) =>
+							normalizeHeroCardId(entity.get('id'), allCards) ===
+							normalizeHeroCardId(element.get('entity'), allCards),
+					)
+					.get('cardID'),
+				allCards,
+			);
+
+			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBobBattlegrounds) {
+				structure.playerHps[playerCardId].armor = parseInt(element.get('value'));
+			}
 		}
 	};
 };
 
-const hpForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+const hpForTurnPopulate = (structure: ParsingStructure, replay: Replay, allCards: AllCardsService) => {
+	return (currentTurn) => {
 		for (const playerCardId of Object.keys(structure.playerHps)) {
+			if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBobBattlegrounds) {
+				continue;
+			}
 			const currentHps = [...(structure.hpOverTurn[playerCardId] || [])];
+			const playerHp = structure.playerHps[playerCardId];
 			currentHps.push({
 				turn: currentTurn,
-				value: structure.playerHps[playerCardId],
+				value: playerHp.startingHp + playerHp.armor - playerHp.damage,
 			});
 			structure.hpOverTurn[playerCardId] = currentHps;
 		}
 	};
 };
 
-const leaderboardForTurnParse = (structure: ParsingStructure, playerEntities: readonly Element[]) => {
-	return element => {
+const leaderboardForTurnParse = (
+	structure: ParsingStructure,
+	playerEntities: readonly Element[],
+	allCards: AllCardsService,
+) => {
+	return (element) => {
 		if (
 			element.tag === 'TagChange' &&
 			parseInt(element.get('tag')) === GameTag.PLAYER_LEADERBOARD_PLACE &&
-			playerEntities.map(entity => entity.get('id')).indexOf(element.get('entity')) !== -1
+			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
 		) {
 			// console.debug('finding leaderboard for turn', playerEntities.map(entity => entity.get('id')), element.get('entity'));
-			const playerCardId = normalizeHeroCardId(playerEntities
-				.find(entity => normalizeHeroCardId(entity.get('id')) === normalizeHeroCardId(element.get('entity')))
-				.get('cardID'));
+			const playerCardId = normalizeHeroCardId(
+				playerEntities
+					.find(
+						(entity) =>
+							normalizeHeroCardId(entity.get('id'), allCards) ===
+							normalizeHeroCardId(element.get('entity'), allCards),
+					)
+					.get('cardID'),
+				allCards,
+			);
 			structure.leaderboardPositions[playerCardId] = parseInt(element.get('value'));
 		}
 	};
 };
 
 const leaderboardForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		for (const playerCardId of Object.keys(structure.leaderboardPositions)) {
 			const currentLeaderboards = [...(structure.leaderboardPositionOverTurn[playerCardId] || [])];
 			currentLeaderboards.push({
@@ -329,7 +392,7 @@ const leaderboardForTurnPopulate = (structure: ParsingStructure, replay: Replay)
 };
 
 const rerollsForTurnParse = (structure: ParsingStructure) => {
-	return element => {
+	return (element) => {
 		if (element.tag === 'FullEntity' && element.get('cardID') === 'TB_BaconShop_8p_Reroll_Button') {
 			structure.rerollsIds = [...structure.rerollsIds, element.get('id')];
 		}
@@ -346,7 +409,7 @@ const rerollsForTurnParse = (structure: ParsingStructure) => {
 };
 
 const rerollsForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		structure.rerollOverTurn = structure.rerollOverTurn.set(currentTurn, structure.rerollsForTurn);
 		structure.rerollsForTurn = 0;
 	};
@@ -375,7 +438,7 @@ const mainPlayerHeroPowerForTurnParse = (structure: ParsingStructure, mainPlayer
 };
 
 const mainPlayerHeroPowerForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		structure.mainPlayerHeroPowerOverTurn = structure.mainPlayerHeroPowerOverTurn.set(
 			currentTurn,
 			structure.mainPlayerHeroPowersForTurn,
@@ -391,7 +454,7 @@ const mainPlayerHeroPowerForTurnPopulate = (structure: ParsingStructure, replay:
 };
 
 const freezesForTurnParse = (structure: ParsingStructure) => {
-	return element => {
+	return (element) => {
 		if (element.tag === 'FullEntity' && element.get('cardID') === 'TB_BaconShopLockAll_Button') {
 			structure.freezesIds = [...structure.freezesIds, element.get('id')];
 			// console.debug('freezesIds', structure.freezesIds);
@@ -410,14 +473,14 @@ const freezesForTurnParse = (structure: ParsingStructure) => {
 };
 
 const freezesForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		structure.freezeOverTurn = structure.freezeOverTurn.set(currentTurn, structure.freezesForTurn);
 		structure.freezesForTurn = 0;
 	};
 };
 
 const wentFirstInBattleForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		structure.wentFirstInBattleOverTurn = structure.wentFirstInBattleOverTurn.set(
 			currentTurn,
 			structure.wentFirstInBattleThisTurn,
@@ -441,7 +504,10 @@ const wentFirstInBattleForTurnParse = (structure: ParsingStructure, mainPlayerPl
 			const firstAttack = element.find(`.Block[@type='${BlockType.ATTACK}']`);
 			const attackingEntity = structure.entities[firstAttack.get('entity')];
 			if (!attackingEntity) {
-				console.warn('trying to know who went first in battle without attacking entity', firstAttack.get('entity'));
+				console.warn(
+					'trying to know who went first in battle without attacking entity',
+					firstAttack.get('entity'),
+				);
 				return;
 			}
 			if (attackingEntity.cardType === CardType.HERO) {
@@ -469,27 +535,24 @@ const coinsWastedForTurnParse = (structure: ParsingStructure, mainPlayerEntityId
 };
 
 const coinsWastedForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		if (currentTurn === 0) {
 			return;
 		}
-		
+
 		// The tag isn't present after the last round
 		const resourcesForTurn = structure.resourcesForTurn || 10;
 		// The tag RESOURCES_USED seem to indicate, at the end of each turn, how many resources have been used.
 		// So we don't really need to compute anything
 		const resourcesWasted = Math.max(0, resourcesForTurn - structure.resourcesUsedForTurn);
-		structure.coinsWastedOverTurn = structure.coinsWastedOverTurn.set(
-			currentTurn,
-			resourcesWasted,
-		);
+		structure.coinsWastedOverTurn = structure.coinsWastedOverTurn.set(currentTurn, resourcesWasted);
 		structure.resourcesForTurn = 0;
 		structure.resourcesUsedForTurn = 0;
 	};
 };
 
 const minionsSoldForTurnParse = (structure: ParsingStructure) => {
-	return element => {
+	return (element) => {
 		if (element.tag === 'FullEntity' && element.get('cardID') === 'TB_BaconShop_DragSell') {
 			structure.minionsSoldIds = [...structure.minionsSoldIds, element.get('id')];
 		}
@@ -504,14 +567,14 @@ const minionsSoldForTurnParse = (structure: ParsingStructure) => {
 };
 
 const minionsSoldForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		structure.minionsSoldOverTurn = structure.minionsSoldOverTurn.set(currentTurn, structure.minionsSoldForTurn);
 		structure.minionsSoldForTurn = 0;
 	};
 };
 
 const minionsBoughtForTurnParse = (structure: ParsingStructure) => {
-	return element => {
+	return (element) => {
 		if (element.tag === 'FullEntity' && element.get('cardID') === 'TB_BaconShop_DragBuy') {
 			structure.minionsBoughtIds = [...structure.minionsBoughtIds, element.get('id')];
 		}
@@ -528,7 +591,7 @@ const minionsBoughtForTurnParse = (structure: ParsingStructure) => {
 };
 
 const minionsBoughtForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		structure.minionsBoughtOverTurn = structure.minionsBoughtOverTurn.set(
 			currentTurn,
 			structure.minionsBoughtForTurn,
@@ -538,12 +601,12 @@ const minionsBoughtForTurnPopulate = (structure: ParsingStructure, replay: Repla
 };
 
 const totalStatsForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		const totalStatsOnBoard = Object.values(structure.entities)
-			.filter(entity => entity.controller === replay.mainPlayerId)
-			.filter(entity => entity.zone === Zone.PLAY)
-			.filter(entity => entity.cardType === CardType.MINION)
-			.map(entity => entity.atk + entity.health)
+			.filter((entity) => entity.controller === replay.mainPlayerId)
+			.filter((entity) => entity.zone === Zone.PLAY)
+			.filter((entity) => entity.cardType === CardType.MINION)
+			.map((entity) => entity.atk + entity.health)
 			.reduce((a, b) => a + b, 0);
 		structure.totalStatsOverTurn = structure.totalStatsOverTurn.set(currentTurn, totalStatsOnBoard);
 	};
@@ -559,16 +622,16 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 				return;
 			}
 			// Only look for direct children, to avoid counting the same elements twice (for each action)
-			// As far as I know the damage tags can only appear as children of BLOCKs, so we should not 
+			// As far as I know the damage tags can only appear as children of BLOCKs, so we should not
 			// miss anything by doing that
 			const damageTags = element.findall(`.MetaData[@meta='${MetaTags.DAMAGE}']`);
 			// If it's an attack, the attacker deals to the def, and vice versa
 			if ([BlockType.ATTACK].indexOf(parseInt(element.get('type'))) !== -1) {
 				const attackerEntityId = element.find(`.//TagChange[@tag='${GameTag.ATTACKING}']`)?.get('entity');
 				const defenderEntityId = element.find(`.//TagChange[@tag='${GameTag.DEFENDING}']`)?.get('entity');
-				damageTags.forEach(tag => {
+				damageTags.forEach((tag) => {
 					const infos = tag.findall(`.Info`);
-					infos.forEach(info => {
+					infos.forEach((info) => {
 						const damagedEntity = structure.entities[info.get('entity')];
 						if (!damagedEntity) {
 							console.warn('Could not find damaged entity', info.get('entity'), actionEntity);
@@ -603,22 +666,22 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 				});
 			}
 			// Otherwise, it goes one way
-			// It can happen that damage it 
+			// It can happen that damage it
 			else {
 				// We do the damage
 				if (actionEntity.controller === replay.mainPlayerId && actionEntity.cardType === CardType.MINION) {
-					const newDamage = damageTags.map(tag => parseInt(tag.get('data'))).reduce((a, b) => a + b, 0);
+					const newDamage = damageTags.map((tag) => parseInt(tag.get('data'))).reduce((a, b) => a + b, 0);
 					structure.minionsDamageDealt[actionEntity.cardId] =
 						(structure.minionsDamageDealt[actionEntity.cardId] || 0) + newDamage;
-						// if (actionEntity.cardId === 'BGS_126' && newDamage > 0) {
-						// 	console.debug('adding damage from else', newDamage, element.attrib)
-						// }
+					// if (actionEntity.cardId === 'BGS_126' && newDamage > 0) {
+					// 	console.debug('adding damage from else', newDamage, element.attrib)
+					// }
 				}
 				// Damage is done to us
 				else if (actionEntity.controller !== replay.mainPlayerId && actionEntity.cardType === CardType.MINION) {
-					damageTags.forEach(tag => {
+					damageTags.forEach((tag) => {
 						const infos = tag.findall(`.Info`);
-						infos.forEach(info => {
+						infos.forEach((info) => {
 							const damagedEntity = structure.entities[info.get('entity')];
 							if (!damagedEntity) {
 								console.warn('Could not find damaged entity', info.get('entity'), actionEntity);
@@ -643,14 +706,16 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 	};
 };
 
-
-
-const damageDealtToEnemyHeroParse = (structure: ParsingStructure, replay: Replay, opponentHeroEntityIds: readonly number[]) => {
+const damageDealtToEnemyHeroParse = (
+	structure: ParsingStructure,
+	replay: Replay,
+	opponentHeroEntityIds: readonly number[],
+) => {
 	return (element: Element) => {
 		if (element.tag === 'MetaData' && parseInt(element.get('meta')) === MetaTags.DAMAGE) {
 			const infos = element
 				.findall(`.Info`)
-				.filter(info => opponentHeroEntityIds.indexOf(parseInt(info.get('entity'))) !== -1);
+				.filter((info) => opponentHeroEntityIds.indexOf(parseInt(info.get('entity'))) !== -1);
 
 			if (!infos || infos.length === 0) {
 				return;
@@ -660,13 +725,15 @@ const damageDealtToEnemyHeroParse = (structure: ParsingStructure, replay: Replay
 				value: parseInt(element.get('data')),
 			};
 		}
-		
 	};
 };
 
 const damageDealtToEnemyHeroPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
-		structure.damageToEnemyHeroOverTurn = structure.damageToEnemyHeroOverTurn.set(currentTurn, structure.damageToEnemyHeroForTurn);
+	return (currentTurn) => {
+		structure.damageToEnemyHeroOverTurn = structure.damageToEnemyHeroOverTurn.set(
+			currentTurn,
+			structure.damageToEnemyHeroForTurn,
+		);
 		structure.damageToEnemyHeroForTurn = {
 			enemyHeroCardId: undefined,
 			value: 0,
@@ -675,12 +742,12 @@ const damageDealtToEnemyHeroPopulate = (structure: ParsingStructure, replay: Rep
 };
 
 // While we don't use the metric, the entity info that is populated is useful for other extractors
-const compositionForTurnParse = (structure: ParsingStructure) => {
+const compositionForTurnParse = (structure: ParsingStructure, allCards: AllCardsService) => {
 	return (element: Element) => {
 		if (element.tag === 'FullEntity') {
 			structure.entities[element.get('id')] = {
 				entityId: parseInt(element.get('id')),
-				cardId: normalizeHeroCardId(element.get('cardID')),
+				cardId: normalizeHeroCardId(element.get('cardID'), allCards),
 				controller: parseInt(element.find(`.Tag[@tag='${GameTag.CONTROLLER}']`)?.get('value') || '-1'),
 				zone: parseInt(element.find(`.Tag[@tag='${GameTag.ZONE}']`)?.get('value') || '-1'),
 				zonePosition: parseInt(element.find(`.Tag[@tag='${GameTag.ZONE_POSITION}']`)?.get('value') || '-1'),
@@ -695,7 +762,11 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				divineShield: parseInt(element.find(`.Tag[@tag='${GameTag.DIVINE_SHIELD}']`)?.get('value') || '0'),
 				poisonous: parseInt(element.find(`.Tag[@tag='${GameTag.POISONOUS}']`)?.get('value') || '0'),
 				reborn: parseInt(element.find(`.Tag[@tag='${GameTag.REBORN}']`)?.get('value') || '0'),
-				tags: Map(element.findall('.Tag').map(tag => [GameTag[parseInt(tag.get('tag'))], parseInt(tag.get('value'))])),
+				tags: Map(
+					element
+						.findall('.Tag')
+						.map((tag) => [GameTag[parseInt(tag.get('tag'))], parseInt(tag.get('value'))]),
+				),
 			};
 		}
 		if (structure.entities[element.get('entity')] && !!element.get('tag')) {
@@ -736,20 +807,21 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				structure.entities[element.get('entity')].reborn = parseInt(element.get('value'));
 			}
 			structure.entities[element.get('entity')].tags = structure.entities[element.get('entity')].tags.set(
-				GameTag[parseInt(element.get('tag'))], parseInt(element.get('value'))
-			)
+				GameTag[parseInt(element.get('tag'))],
+				parseInt(element.get('value')),
+			);
 		}
 	};
 };
 
 const compositionForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		const playerEntitiesOnBoard = Object.values(structure.entities)
-			.map(entity => entity)
-			.filter(entity => entity.controller === replay.mainPlayerId)
-			.filter(entity => entity.zone === Zone.PLAY)
-			.filter(entity => entity.cardType === CardType.MINION)
-			.map(entity => ({
+			.map((entity) => entity)
+			.filter((entity) => entity.controller === replay.mainPlayerId)
+			.filter((entity) => entity.zone === Zone.PLAY)
+			.filter((entity) => entity.cardType === CardType.MINION)
+			.map((entity) => ({
 				cardId: entity.cardId,
 				tribe: entity.tribe,
 			}));
@@ -759,16 +831,19 @@ const compositionForTurnPopulate = (structure: ParsingStructure, replay: Replay)
 };
 
 const boardForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
-	return currentTurn => {
+	return (currentTurn) => {
 		const playerEntitiesOnBoard = Object.values(structure.entities)
-			.filter(entity => entity.controller === replay.mainPlayerId)
-			.filter(entity => entity.zone === Zone.PLAY)
-			.filter(entity => entity.cardType === CardType.MINION)
-			.map(entity => ({
-				cardID: entity.cardId,
-				id: entity.entityId,
-				tags: entity.tags,
-			} as Entity));
+			.filter((entity) => entity.controller === replay.mainPlayerId)
+			.filter((entity) => entity.zone === Zone.PLAY)
+			.filter((entity) => entity.cardType === CardType.MINION)
+			.map(
+				(entity) =>
+					({
+						cardID: entity.cardId,
+						id: entity.entityId,
+						tags: entity.tags,
+					} as Entity),
+			);
 		structure.boardOverTurnDetailed = structure.boardOverTurnDetailed.set(currentTurn, playerEntitiesOnBoard);
 		// console.log('updated', structure.boardOverTurn.toJS(), playerEntitiesOnBoard);
 	};
@@ -783,7 +858,7 @@ const parseElement = (
 	parseFunctions,
 	populateFunctions,
 ) => {
-	parseFunctions.forEach(parseFunction => parseFunction(element));
+	parseFunctions.forEach((parseFunction) => parseFunction(element));
 	if (element.tag === 'TagChange') {
 		if (
 			parseInt(element.get('tag')) === GameTag.NEXT_STEP &&
@@ -791,7 +866,7 @@ const parseElement = (
 		) {
 			// console.log('considering parent', parent.get('entity'), parent);
 			if (parent && parent.get('entity') === opponentPlayerEntityId) {
-				populateFunctions.forEach(populateFunction => populateFunction(turnCountWrapper.currentTurn));
+				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
 				turnCountWrapper.currentTurn++;
 			}
 			// console.log('board for turn', structure.currentTurn, mainPlayerId, '\n', playerEntitiesOnBoard);
@@ -801,7 +876,7 @@ const parseElement = (
 			[PlayState.WON, PlayState.LOST].indexOf(parseInt(element.get('value'))) !== -1
 		) {
 			if (element.get('entity') === opponentPlayerEntityId) {
-				populateFunctions.forEach(populateFunction => populateFunction(turnCountWrapper.currentTurn));
+				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
 				turnCountWrapper.currentTurn++;
 			}
 		}

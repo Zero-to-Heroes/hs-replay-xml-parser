@@ -1,13 +1,34 @@
-import { AllCardsService, BnetRegion, CardIds, CardType, GameTag, GameType, PlayState, Zone } from '@firestone-hs/reference-data';
+import {
+	AllCardsService,
+	BnetRegion,
+	CardIds,
+	CardType,
+	GameTag,
+	GameType,
+	PlayState,
+	Zone,
+} from '@firestone-hs/reference-data';
 import bigInt from 'big-integer';
 import { Element, ElementTree, parse } from 'elementtree';
 import { heroPickExtractor } from './exrtactors/battlegrounds/hero-pick-extractor';
 import { extractHasBgsQuests, extractHeroQuests } from './exrtactors/battlegrounds/quests-extractor';
 import { Replay } from './model/replay';
 
-const INNKEEPER_NAMES = ["The Innkeeper", "Aubergiste", "Gastwirt",
-"El tabernero", "Locandiere", "酒場のオヤジ", "여관주인",  "Karczmarz", "O Estalajadeiro", "Хозяин таверны",
-"เจ้าของโรงแรม", "旅店老板", "旅店老闆"];
+const INNKEEPER_NAMES = [
+	'The Innkeeper',
+	'Aubergiste',
+	'Gastwirt',
+	'El tabernero',
+	'Locandiere',
+	'酒場のオヤジ',
+	'여관주인',
+	'Karczmarz',
+	'O Estalajadeiro',
+	'Хозяин таверны',
+	'เจ้าของโรงแรม',
+	'旅店老板',
+	'旅店老闆',
+];
 
 export const buildReplayFromXml = (replayString: string, allCards: AllCardsService): Replay => {
 	if (!replayString || replayString.length === 0) {
@@ -20,8 +41,7 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	const elementTree = parse(replayString);
 	// console.log('elementTree');
 
-	let mainPlayerElement =
-		elementTree.findall('.//Player').find(player => player.get('isMainPlayer') === 'true');
+	let mainPlayerElement = elementTree.findall('.//Player').find((player) => player.get('isMainPlayer') === 'true');
 	// Can happen in case of reconnects
 	if (!mainPlayerElement) {
 		// Find out known cards in hand, they must belong to the player
@@ -31,11 +51,13 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 			const inHand = entity.find(`.Tag[@tag='${GameTag.ZONE}'][@value='${Zone.HAND}']`);
 			if (inHand && !!cardId) {
 				const controllerId = entity.find(`.Tag[@tag='${GameTag.CONTROLLER}']`).get('value');
-				mainPlayerElement = elementTree.findall('.//Player').find(player => player.get('playerID') === controllerId);
+				mainPlayerElement = elementTree
+					.findall('.//Player')
+					.find((player) => player.get('playerID') === controllerId);
 				break;
 			}
 		}
-	}	
+	}
 	// Reconnect happened without any card in hand
 	if (!mainPlayerElement) {
 		// No idea how to handle this
@@ -48,13 +70,17 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	const mainPlayerEntityId = mainPlayerElement.get('id');
 	// console.debug('main player', mainPlayerId, mainPlayerName, mainPlayerEntityId);
 	const mainPlayerCardId = extractPlayerCardId(mainPlayerElement, mainPlayerEntityId, elementTree, allCards);
+	const mainPlayerHeroPowerCardId = extractHeroPowerCardId(mainPlayerId, elementTree, allCards);
+
 	const region: BnetRegion = bigInt(parseInt(mainPlayerElement.get('accountHi')))
 		.shiftRight(32)
 		.and(0xff)
 		.toJSNumber();
 	// console.log('mainPlayer');
 
-	const opponentCandidates = elementTree.findall(`.//Player[@isMainPlayer="false"]`).filter(entity => parseInt(entity.get('playerID')) !== mainPlayerId);
+	const opponentCandidates = elementTree
+		.findall(`.//Player[@isMainPlayer="false"]`)
+		.filter((entity) => parseInt(entity.get('playerID')) !== mainPlayerId);
 	const opponentPlayerElement = [...opponentCandidates].pop();
 	const opponentPlayerId = parseInt(opponentPlayerElement.get('playerID'));
 	const opponentPlayerEntityId = opponentPlayerElement.get('id');
@@ -64,16 +90,19 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 		elementTree,
 		allCards,
 	);
-	// In short, this is a mess. When playing against a human, there are two players, one being an "AI" of sort, 
+	const opponentPlayerHeroPowerCardId = extractHeroPowerCardId(opponentPlayerId, elementTree, allCards);
+
+	// In short, this is a mess. When playing against a human, there are two players, one being an "AI" of sort,
 	// and the other being the actual player
 	const humanPlayerOpponentCandidates = opponentCandidates
-		.filter(opponent => opponent.get('name') !== 'UNKNOWN HUMAN PLAYER')
-		.filter(opponent => !INNKEEPER_NAMES.includes(opponent.get('name')));
-	const opponentPlayerElementForName = opponentCandidates.length === 1 
-		? opponentCandidates[0] 
-		: humanPlayerOpponentCandidates.length > 0 
-		? humanPlayerOpponentCandidates[0] 
-		: [...opponentCandidates].pop();	
+		.filter((opponent) => opponent.get('name') !== 'UNKNOWN HUMAN PLAYER')
+		.filter((opponent) => !INNKEEPER_NAMES.includes(opponent.get('name')));
+	const opponentPlayerElementForName =
+		opponentCandidates.length === 1
+			? opponentCandidates[0]
+			: humanPlayerOpponentCandidates.length > 0
+			? humanPlayerOpponentCandidates[0]
+			: [...opponentCandidates].pop();
 	const opponentPlayerName = opponentPlayerElementForName.get('name');
 	// console.log('opponentPlayerName', opponentPlayerName, mainPlayerElement, humanPlayerOpponentCandidates);
 	// console.log('opponentPlayer');
@@ -85,10 +114,9 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	const result = extractResult(mainPlayerEntityId, elementTree);
 	// console.log('result');
 	const isBgGame = gameMode === GameType.GT_BATTLEGROUNDS || gameMode === GameType.GT_BATTLEGROUNDS_FRIENDLY;
-	const additionalResult =
-		isBgGame		
-			? '' + extractBgsAdditionalResult(mainPlayerId, mainPlayerCardId, opponentPlayerId, elementTree)
-			: null;
+	const additionalResult = isBgGame
+		? '' + extractBgsAdditionalResult(mainPlayerId, mainPlayerCardId, opponentPlayerId, elementTree)
+		: null;
 	// console.log('bgsResult');
 	const playCoin = extarctPlayCoin(mainPlayerEntityId, elementTree);
 
@@ -102,10 +130,12 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 		mainPlayerEntityId: +mainPlayerEntityId,
 		mainPlayerName: mainPlayerName,
 		mainPlayerCardId: mainPlayerCardId,
+		mainPlayerHeroPowerCardId: mainPlayerHeroPowerCardId,
 		opponentPlayerId: opponentPlayerId,
 		opponentPlayerEntityId: +opponentPlayerEntityId,
 		opponentPlayerName: opponentPlayerName,
 		opponentPlayerCardId: opponentPlayerCardId,
+		opponentPlayerHeroPowerCardId: opponentPlayerHeroPowerCardId,
 		region: region,
 		gameFormat: gameFormat,
 		gameType: gameMode,
@@ -135,10 +165,14 @@ const extractPlayerCardId = (
 	if (cardId === 'TB_BaconShop_HERO_PH') {
 		const tagChanges = elementTree
 			.findall(`.//TagChange[@tag='${GameTag.HERO_ENTITY}'][@entity='${playerEntityId}']`)
-			.map(tag => tag.get('value'));
+			.map((tag) => tag.get('value'));
 		const pickedPlayedHero = tagChanges && tagChanges.length > 0 ? tagChanges[0] : null;
 		const newHero = elementTree.findall(`.//FullEntity[@id='${pickedPlayedHero}']`)[0];
-		cardId = newHero.get('cardID');
+		if (!newHero) {
+			console.warn('Could not identify hero from picks', pickedPlayedHero);
+		} else {
+			cardId = newHero.get('cardID');
+		}
 	}
 
 	if (allCards) {
@@ -147,9 +181,9 @@ const extractPlayerCardId = (
 		const heroControllerId = heroEntity.find(`.Tag[@tag='${GameTag.CONTROLLER}']`).get('value');
 		const heroRevealed = elementTree
 			.findall(`.//FullEntity`)
-			.filter(entity => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO}']`))
-			.filter(entity => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${heroControllerId}']`))
-			.filter(entity => entity.find(`.Tag[@tag='${GameTag.CREATOR_DBID}'][@value='${disguiseDbfId}']`));
+			.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO}']`))
+			.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${heroControllerId}']`))
+			.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CREATOR_DBID}'][@value='${disguiseDbfId}']`));
 		if (heroRevealed.length > 0) {
 			cardId = heroRevealed[heroRevealed.length - 1].get('cardID');
 		}
@@ -157,34 +191,75 @@ const extractPlayerCardId = (
 		// 	cardId = CardIds.ValeeraSanguinarHeroSkins;
 		// }
 	}
-	
+
+	return cardId;
+};
+
+const extractHeroPowerCardId = (
+	playerId: number,
+	elementTree: ElementTree,
+	allCards: AllCardsService = null,
+): string => {
+	const heroPowerElements = elementTree
+		.findall('.//FullEntity')
+		.filter(
+			(e) =>
+				e.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO_POWER}']`) &&
+				e.find(`.Tag[@tag='${GameTag.ZONE}'][@value='${Zone.PLAY}']`) &&
+				e.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${playerId}']`),
+		);
+	// We want the starting hero power only
+	const startingHeroPowerElement = heroPowerElements[0];
+	// Mercenaries don't have a hero power
+	if (!startingHeroPowerElement) {
+		return null;
+	}
+	let cardId = startingHeroPowerElement.get('cardID');
+
+	if (allCards) {
+		// Handle Maestra
+		const disguiseDbfId = allCards.getCard(CardIds.MaestraOfTheMasquerade_DisguiseEnchantment).dbfId;
+		const heroRevealed = elementTree
+			.findall(`.//FullEntity`)
+			.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO_POWER}']`))
+			.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${playerId}']`))
+			.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CREATOR_DBID}'][@value='${disguiseDbfId}']`));
+		if (heroRevealed.length > 0) {
+			cardId = heroRevealed[heroRevealed.length - 1].get('cardID');
+		}
+	}
+
 	return cardId;
 };
 
 const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): string => {
 	const winChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WON}']`);
 	if (!!winChanges?.length) {
-		// Because mercenaries introduce another player that mimics the main player, but with another 
+		// Because mercenaries introduce another player that mimics the main player, but with another
 		// entity ID, we need to look at all the tags
-		return winChanges.some(winChange =>  mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
+		return winChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
 	}
-	
+
 	// For some reason when conceding (early?) in mercs, the WON state never shows up
-	const winningChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WINNING}']`);
+	const winningChanges = elementTree.findall(
+		`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WINNING}']`,
+	);
 	if (!!winningChanges?.length) {
-		return winningChanges.some(winChange =>  mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
+		return winningChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
 	}
 
 	// Same comment with LOSE / LOSING
 	const loseChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOST}']`);
 	if (!!loseChanges?.length) {
-		return loseChanges.some(winChange =>  mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
+		return loseChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
 	}
-	const losingChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOSING}']`);
+	const losingChanges = elementTree.findall(
+		`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOSING}']`,
+	);
 	if (!!losingChanges?.length) {
-		return losingChanges.some(winChange =>  mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
+		return losingChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
 	}
-	
+
 	const tieChange = elementTree.find(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.TIED}']`);
 	return tieChange ? 'tied' : 'unknown';
 };
@@ -205,22 +280,22 @@ const extractBgsAdditionalResult = (
 	// console.log('mainPlayerId', mainPlayerId);
 	const playerEntities = extractPlayerEntities(mainPlayerId, elementTree, true);
 	// console.log('playerEntities', playerEntities);
-	const entityIds = playerEntities.map(entity => entity.get('id'));
+	const entityIds = playerEntities.map((entity) => entity.get('id'));
 	// console.log('player entity ids', entityIds);
 	let leaderboardTags = elementTree
 		.findall(`.//TagChange[@tag='${GameTag.PLAYER_LEADERBOARD_PLACE}']`)
-		.filter(tag => entityIds.indexOf(tag.get('entity')) !== -1)
-		.map(tag => parseInt(tag.get('value')))
-		.filter(value => value > 0);
+		.filter((tag) => entityIds.indexOf(tag.get('entity')) !== -1)
+		.map((tag) => parseInt(tag.get('value')))
+		.filter((value) => value > 0);
 	// console.log('leaderboard tag changes', leaderboardTags);
 	// No tag change, look at root tag
 	if (!leaderboardTags || leaderboardTags.length === 0) {
 		// console.log('no tag change, looking at root');
 		leaderboardTags = playerEntities
-			.map(entity => entity.find(`.Tag[@tag='${GameTag.PLAYER_LEADERBOARD_PLACE}']`))
-			.filter(tag => tag)
-			.map(tag => parseInt(tag.get('value')))
-			.filter(value => value > 0);
+			.map((entity) => entity.find(`.Tag[@tag='${GameTag.PLAYER_LEADERBOARD_PLACE}']`))
+			.filter((tag) => tag)
+			.map((tag) => parseInt(tag.get('value')))
+			.filter((value) => value > 0);
 		// console.log('leaderboard tag changes at root', leaderboardTags);
 	}
 	return !leaderboardTags || leaderboardTags.length === 0 ? 0 : leaderboardTags[leaderboardTags.length - 1];
@@ -232,24 +307,24 @@ export const extractPlayerEntities = (playerId: number, elementTree: ElementTree
 	// The heroes that were discarded in the hero selection phase (if any)
 	const invalidCardIds: readonly string[] = pickedHeroFullEntity
 		? pickOptions
-				.map(option => option.get('cardID'))
-				.filter(cardId => cardId !== pickedHeroFullEntity.get('cardID'))
+				.map((option) => option.get('cardID'))
+				.filter((cardId) => cardId !== pickedHeroFullEntity.get('cardID'))
 		: [];
 
 	return elementTree
 		.findall('.//FullEntity')
-		.filter(entity => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO}']`))
-		.filter(entity => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${playerId}']`))
+		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO}']`))
+		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${playerId}']`))
 		.filter(
-			entity =>
+			(entity) =>
 				!isMainPlayer ||
 				![Zone.SETASIDE, Zone.GRAVEYARD].includes(
 					parseInt(entity.find(`.Tag[@tag='${GameTag.ZONE}']`).get('value')),
 				),
 		)
-		.filter(entity => !invalidCardIds.includes(entity.get('cardID')))
+		.filter((entity) => !invalidCardIds.includes(entity.get('cardID')))
 		.filter(
-			entity =>
+			(entity) =>
 				!['TB_BaconShop_HERO_PH', 'TB_BaconShop_HERO_KelThuzad', 'TB_BaconShopBob'].includes(
 					entity.get('cardID'),
 				),

@@ -28,7 +28,11 @@ export interface ParsingStructure {
 		};
 	};
 	playerHps: {
-		[cardId: string]: number;
+		[cardId: string]: {
+			startingHp: number;
+			damage: number;
+			armor: number;
+		};
 	};
 	leaderboardPositions: {
 		[cardId: string]: number;

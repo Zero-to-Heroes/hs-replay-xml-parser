@@ -11,19 +11,19 @@ export const buildPostMatchStats = (
 	replayXml: string,
 	mainPlayer: BgsPlayer,
 	battleResultHistory: readonly BattleResultHistory[],
-	faceOffs: readonly BgsFaceOff[], 
+	faceOffs: readonly BgsFaceOff[],
 	allCards: AllCardsService,
 ): BgsPostMatchStats => {
 	const replay: Replay = parseHsReplayString(replayXml, allCards);
 	// console.log('parsed replay', replayXml?.length);
 	const player: BgsPlayer = mainPlayer;
-	const structure = reparseReplay(replay);
+	const structure = reparseReplay(replay, allCards);
 	const compositionsOverTurn: readonly BgsComposition[] = buildCompositionsOverTurn(player?.boardHistory ?? []);
 	const postMatchStats: BgsPostMatchStats = {
 		tavernTimings: player?.tavernUpgradeHistory ?? [],
 		tripleTimings: player?.tripleHistory ?? [], // TODO: add the cards when relevant
 		coinsWastedOverTurn: structure.coinsWastedOverTurn,
-		rerolls: structure.rerollsOverTurn.map(turnInfo => turnInfo.value).reduce((a, b) => a + b, 0),
+		rerolls: structure.rerollsOverTurn.map((turnInfo) => turnInfo.value).reduce((a, b) => a + b, 0),
 		boardHistory: player?.boardHistory ?? structure.boardHistory ?? [],
 		rerollsOverTurn: structure.rerollsOverTurn,
 		freezesOverTurn: structure.freezesOverTurn,
@@ -58,14 +58,14 @@ const buildCompositionsOverTurn = (boardHistory: readonly BgsBoard[]): readonly 
 						: entity.tags[GameTag[GameTag.CARDRACE]]
 				],
 		)(board.board);
-		return Object.keys(groupedByTribe).map(tribe => ({
+		return Object.keys(groupedByTribe).map((tribe) => ({
 			turn: board.turn,
 			tribe: tribe,
 			count: groupedByTribe[tribe].length,
 		}));
 	};
 	return boardHistory
-		? boardHistory.map(history => extractCompositionsForTurn(history)).reduce((a, b) => a.concat(b), [])
+		? boardHistory.map((history) => extractCompositionsForTurn(history)).reduce((a, b) => a.concat(b), [])
 		: [];
 };
 
@@ -73,8 +73,8 @@ const buildCompositionsOverTurn = (boardHistory: readonly BgsBoard[]): readonly 
 export const buildWinLuckFactor = (battleResultHistory: readonly BattleResultHistory[]): number => {
 	return spreadAroundZero(
 		battleResultHistory
-			.filter(history => history.simulationResult) // Mostly for dev, shouldn't happen in real life
-			.map(history => {
+			.filter((history) => history.simulationResult) // Mostly for dev, shouldn't happen in real life
+			.map((history) => {
 				const victory = history.actualResult === 'won' ? 1 : 0;
 				const chance = history.simulationResult.wonPercent / 100;
 				return victory - chance;
@@ -85,8 +85,8 @@ export const buildWinLuckFactor = (battleResultHistory: readonly BattleResultHis
 export const buildTieLuckFactor = (battleResultHistory: readonly BattleResultHistory[]): number => {
 	return spreadAroundZero(
 		battleResultHistory
-			.filter(history => history.simulationResult)
-			.map(history => {
+			.filter((history) => history.simulationResult)
+			.map((history) => {
 				const victory = history.actualResult === 'won' || history.actualResult === 'tied' ? 1 : 0;
 				const chance = (history.simulationResult.wonPercent + history.simulationResult.tiedPercent) / 100;
 				return victory - chance;
