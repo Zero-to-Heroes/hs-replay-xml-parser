@@ -1,11 +1,12 @@
 {
 	"name": "@firestone-hs/hs-replay-xml-parser",
-	"version": "0.0.112",
+	"version": "0.0.113",
 	"description": "",
 	"scripts": {
 		"lint": "eslint --color --fix --ext .ts .",
 		"singleTest": "node --max_old_space_size=6000 ./node_modules/jest/bin/jest.js --runInBand -t",
-		"singleFile": "node --max_old_space_size=6000 ./node_modules/jest/bin/jest.js --runInBand"
+		"singleFile": "node --max_old_space_size=6000 ./node_modules/jest/bin/jest.js --runInBand",
+		"publish-version": "rm -rf dist && tsc && npm publish --access public"
 	},
 	"repository": {},
 	"author": "",
