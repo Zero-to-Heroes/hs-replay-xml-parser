@@ -15,3 +15,27 @@ export const extractAllMinions = (replay: Replay): readonly Element[] => {
 	const allMinionEntities = [...allMinionShowEntities, ...allMinionFullEntities];
 	return allMinionEntities;
 };
+
+export const extractAllCards = (replay: Replay): readonly Element[] => {
+	const allMinionShowEntities = replay.replay
+		.findall('.//ShowEntity')
+		.filter(
+			show =>
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.MINION}']`) ||
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.SPELL}']`) ||
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.LOCATION}']`) ||
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.WEAPON}']`),
+		);
+	const allMinionFullEntities = replay.replay
+		// Only the ones that have been revealed
+		.findall('.//FullEntity[@cardID]')
+		.filter(
+			show =>
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.MINION}']`) ||
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.SPELL}']`) ||
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.LOCATION}']`) ||
+				show.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.WEAPON}']`),
+		);
+	const allMinionEntities = [...allMinionShowEntities, ...allMinionFullEntities];
+	return allMinionEntities;
+};

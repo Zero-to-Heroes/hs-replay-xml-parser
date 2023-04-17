@@ -2,6 +2,7 @@
  * Public API Surface of hs-replay-xml-parser
  */
 
+export * from './lib/generic-game-parser';
 export * from './lib/global-info-extractor';
 export * from './lib/model/battlegrounds';
 export * from './lib/model/bgs-face-off';

@@ -1,5 +1,6 @@
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
+import { allCardsPlayedExtractor } from './exrtactors/all-cards-played-extractor';
 import { allMinionsPlayedExtractor } from './exrtactors/all-minions-played-extractor';
 import {
 	buildPostMatchStats,
@@ -50,6 +51,10 @@ export const extractNumberOfKilledEnemyHeroes = (replay: Replay): number => {
 
 export const extractAllMinionsPlayed = (replay: Replay): PlayerOpponentElements => {
 	return allMinionsPlayedExtractor(replay);
+};
+
+export const extractAllCardPlayed = (replay: Replay): PlayerOpponentElements => {
+	return allCardsPlayedExtractor(replay);
 };
 
 export const extractBgPlayerPick = (replay: Replay): [readonly Element[], Element] => {
