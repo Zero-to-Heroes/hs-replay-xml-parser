@@ -51,7 +51,6 @@ export const reparseReplay = (
 		.findall('.//Player')
 		.find((player) => player.get('isMainPlayer') === 'false');
 	const opponentPlayerEntityId = opponentPlayerElement.get('id');
-	// console.log('mainPlayerEntityId', opponentPlayerEntityId);
 	const structure: ParsingStructure = {
 		currentTurn: 0,
 		boardOverTurn: Map(),
@@ -93,7 +92,6 @@ export const reparseReplay = (
 	};
 
 	const playerEntities = extractAllPlayerEntities(replay.mainPlayerId, replay.opponentPlayerId, replay.replay);
-	// console.debug('player entities', playerEntities.map(entity => entity.get('id')));
 	let mainPlayerEntity = replay.replay.find('.//Player[@isMainPlayer="true"]');
 	if (!mainPlayerEntity) {
 		const players = replay.replay.findall('.//Player');
@@ -125,7 +123,6 @@ export const reparseReplay = (
 			};
 		}
 	}
-	// console.log('mainPlayerId', replay.mainPlayerId);
 
 	const opponentHeroEntityIds = extractHeroEntityIds(replay, replay.opponentPlayerId);
 
@@ -322,7 +319,6 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 
 		if (
 			element.tag === 'TagChange' &&
-			parseInt(element.get('value')) > 0 &&
 			parseInt(element.get('tag')) === GameTag.ARMOR &&
 			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
 		) {
@@ -372,7 +368,6 @@ const leaderboardForTurnParse = (
 			parseInt(element.get('tag')) === GameTag.PLAYER_LEADERBOARD_PLACE &&
 			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
 		) {
-			// console.debug('finding leaderboard for turn', playerEntities.map(entity => entity.get('id')), element.get('entity'));
 			const playerCardId = normalizeHeroCardId(
 				playerEntities
 					.find(
@@ -412,7 +407,6 @@ const rerollsForTurnParse = (structure: ParsingStructure) => {
 			structure.rerollsIds.indexOf(element.get('entity')) !== -1 &&
 			element.findall('.FullEntity').length > 0
 		) {
-			// console.log('adding one reroll', structure.rerollsForTurn, element);
 			structure.rerollsForTurn = structure.rerollsForTurn + 1;
 		}
 	};
@@ -433,7 +427,6 @@ const mainPlayerHeroPowerForTurnParse = (structure: ParsingStructure, mainPlayer
 			element.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${mainPlayerPlayerId}']`)
 		) {
 			structure.mainPlayerHeroPowerIds = [...structure.mainPlayerHeroPowerIds, element.get('id')];
-			// console.debug('mainPlayerHeroPowerIds', structure.mainPlayerHeroPowerIds);
 		}
 		if (
 			element.tag === 'TagChange' &&
@@ -442,7 +435,6 @@ const mainPlayerHeroPowerForTurnParse = (structure: ParsingStructure, mainPlayer
 			structure.mainPlayerHeroPowerIds.indexOf(element.get('entity')) !== -1
 		) {
 			structure.mainPlayerHeroPowersForTurn = structure.mainPlayerHeroPowersForTurn + 1;
-			// console.debug('mainPlayerHeroPowersForTurn', structure.mainPlayerHeroPowersForTurn, element.attrib);
 		}
 	};
 };
@@ -453,12 +445,6 @@ const mainPlayerHeroPowerForTurnPopulate = (structure: ParsingStructure, replay:
 			currentTurn,
 			structure.mainPlayerHeroPowersForTurn,
 		);
-		// console.log(
-		// 	'hero power over turn',
-		// 	currentTurn,
-		// 	structure.mainPlayerHeroPowersForTurn,
-		// 	structure.mainPlayerHeroPowerOverTurn.toJS(),
-		// );
 		structure.mainPlayerHeroPowersForTurn = 0;
 	};
 };
@@ -467,7 +453,6 @@ const freezesForTurnParse = (structure: ParsingStructure) => {
 	return (element) => {
 		if (element.tag === 'FullEntity' && element.get('cardID') === 'TB_BaconShopLockAll_Button') {
 			structure.freezesIds = [...structure.freezesIds, element.get('id')];
-			// console.debug('freezesIds', structure.freezesIds);
 		}
 		if (
 			element.tag === 'Block' &&
@@ -475,9 +460,7 @@ const freezesForTurnParse = (structure: ParsingStructure) => {
 			structure.freezesIds.indexOf(element.get('entity')) !== -1 &&
 			element.findall(`.TagChange[@tag='${GameTag.FROZEN}']`).length > 0
 		) {
-			// console.log('adding one reroll', structure.rerollsForTurn, element);
 			structure.freezesForTurn = structure.freezesForTurn + 1;
-			// console.debug('freezesForTurn', structure.freezesForTurn);
 		}
 	};
 };
@@ -503,7 +486,6 @@ const wentFirstInBattleForTurnParse = (structure: ParsingStructure, mainPlayerPl
 	return (element: Element) => {
 		if (element.tag === 'FullEntity' && element.get('cardID') === 'TB_BaconShop_8P_PlayerE') {
 			structure.mainEnchantEntityIds = [...structure.mainEnchantEntityIds, element.get('id')];
-			// console.debug('freezesIds', structure.freezesIds);
 		}
 		if (
 			element.tag === 'Block' &&
@@ -521,13 +503,10 @@ const wentFirstInBattleForTurnParse = (structure: ParsingStructure, mainPlayerPl
 				return;
 			}
 			if (attackingEntity.cardType === CardType.HERO) {
-				// console.log('ignoring hero attack');
 				return;
 			}
 			const wentFirst = attackingEntity.controller === mainPlayerPlayerId;
-			// console.debug('wentFirst', wentFirst, attackingEntity, mainPlayerPlayerId, firstAttack.attrib);
 			structure.wentFirstInBattleThisTurn = wentFirst;
-			// console.debug('wentFirstInBattleThisTurn', structure.wentFirstInBattleThisTurn);
 		}
 	};
 };
@@ -658,9 +637,6 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 						else if (actionEntity.controller === replay.mainPlayerId) {
 							structure.minionsDamageDealt[actionEntity.cardId] =
 								(structure.minionsDamageDealt[actionEntity.cardId] || 0) + parseInt(tag.get('data'));
-							// if (actionEntity.cardId === 'BGS_126' && parseInt(tag.get('data')) > 0) {
-							// 	console.debug('adding damage from attack', parseInt(tag.get('data')), element.attrib)
-							// }
 						}
 						// Second case, we are attacked so we need to find out who did the damage to the enemy
 						else {
@@ -683,9 +659,6 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 					const newDamage = damageTags.map((tag) => parseInt(tag.get('data'))).reduce((a, b) => a + b, 0);
 					structure.minionsDamageDealt[actionEntity.cardId] =
 						(structure.minionsDamageDealt[actionEntity.cardId] || 0) + newDamage;
-					// if (actionEntity.cardId === 'BGS_126' && newDamage > 0) {
-					// 	console.debug('adding damage from else', newDamage, element.attrib)
-					// }
 				}
 				// Damage is done to us
 				else if (actionEntity.controller !== replay.mainPlayerId && actionEntity.cardType === CardType.MINION) {
@@ -697,9 +670,6 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 								console.warn('Could not find damaged entity', info.get('entity'), actionEntity);
 								return;
 							}
-							// if (damagedEntity.cardId === 'BGS_038') {
-							// 	console.log('handling damage done to us', tag, element);
-							// }
 							if (
 								damagedEntity.controller === replay.mainPlayerId &&
 								damagedEntity.cardType === CardType.MINION
@@ -836,7 +806,6 @@ const compositionForTurnPopulate = (structure: ParsingStructure, replay: Replay)
 				tribe: entity.tribe,
 			}));
 		structure.boardOverTurn = structure.boardOverTurn.set(currentTurn, playerEntitiesOnBoard);
-		// console.log('updated', structure.boardOverTurn.toJS(), playerEntitiesOnBoard);
 	};
 };
 
@@ -855,7 +824,6 @@ const boardForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
 					} as Entity),
 			);
 		structure.boardOverTurnDetailed = structure.boardOverTurnDetailed.set(currentTurn, playerEntitiesOnBoard);
-		// console.log('updated', structure.boardOverTurn.toJS(), playerEntitiesOnBoard);
 	};
 };
 
@@ -874,12 +842,10 @@ const parseElement = (
 			parseInt(element.get('tag')) === GameTag.NEXT_STEP &&
 			parseInt(element.get('value')) === Step.MAIN_START_TRIGGERS
 		) {
-			// console.log('considering parent', parent.get('entity'), parent);
 			if (parent && parent.get('entity') === opponentPlayerEntityId) {
 				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
 				turnCountWrapper.currentTurn++;
 			}
-			// console.log('board for turn', structure.currentTurn, mainPlayerId, '\n', playerEntitiesOnBoard);
 		}
 		if (
 			parseInt(element.get('tag')) === GameTag.PLAYSTATE &&
