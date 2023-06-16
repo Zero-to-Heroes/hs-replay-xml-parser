@@ -8,7 +8,7 @@ import {
 	MetaTags,
 	PlayState,
 	Step,
-	Zone
+	Zone,
 } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { Map } from 'immutable';
@@ -108,14 +108,17 @@ export const reparseReplay = (
 			continue;
 		}
 		try {
-
 			structure.playerHps[playerCardId] = {
 				startingHp: parseInt(entity.find(`Tag[@tag="${GameTag.HEALTH}"]`).get('value')),
 				damage: 0,
 				armor: 0,
 			};
 		} catch (e) {
-			console.error('Could not set starting hp', playerCardId, entity.findall('.//Tag').map(t => ({ name: t.get('tag'), value: t.get('value')})))
+			console.error(
+				'Could not set starting hp',
+				playerCardId,
+				entity.findall('.//Tag').map((t) => ({ name: t.get('tag'), value: t.get('value') })),
+			);
 			structure.playerHps[playerCardId] = {
 				startingHp: 40,
 				damage: 0,
