@@ -109,9 +109,9 @@ export const reparseReplay = (
 		}
 		try {
 			structure.playerHps[playerCardId] = {
-				startingHp: parseInt(entity.find(`Tag[@tag="${GameTag.HEALTH}"]`).get('value')),
-				damage: 0,
-				armor: 0,
+				startingHp: parseInt(entity.find(`Tag[@tag="${GameTag.HEALTH}"]`)?.get('value')) || 30,
+				damage: parseInt(entity.find(`Tag[@tag="${GameTag.DAMAGE}"]`)?.get('value')) || 0,
+				armor: parseInt(entity.find(`Tag[@tag="${GameTag.ARMOR}"]`)?.get('value')) || 0,
 			};
 		} catch (e) {
 			console.error(
@@ -120,7 +120,7 @@ export const reparseReplay = (
 				entity.findall('.//Tag').map((t) => ({ name: t.get('tag'), value: t.get('value') })),
 			);
 			structure.playerHps[playerCardId] = {
-				startingHp: 40,
+				startingHp: 30,
 				damage: 0,
 				armor: 0,
 			};
