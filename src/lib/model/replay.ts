@@ -22,6 +22,8 @@ export class Replay {
 	readonly playCoin: 'play' | 'coin';
 	readonly hasBgsQuests: boolean;
 	readonly bgsHeroQuests: readonly BgsHeroQuest[];
+	readonly hasBgsAnomalies: boolean;
+	readonly bgsAnomalies: readonly string[];
 }
 
 export interface BgsHeroQuest {

@@ -104,7 +104,7 @@ export const reparseReplay = (
 	const mainPlayerEntityId: string = mainPlayerEntity.get('id');
 	for (const entity of playerEntities) {
 		const playerCardId = normalizeHeroCardId(entity.get('cardID'), allCards);
-		if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBobBattlegrounds) {
+		if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBob) {
 			continue;
 		}
 		try {
@@ -315,7 +315,7 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 				allCards,
 			);
 
-			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBobBattlegrounds) {
+			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBob) {
 				structure.playerHps[playerCardId].damage = parseInt(element.get('value'));
 			}
 		}
@@ -336,7 +336,7 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 				allCards,
 			);
 
-			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBobBattlegrounds) {
+			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBob) {
 				structure.playerHps[playerCardId].armor = parseInt(element.get('value'));
 			}
 		}
@@ -346,7 +346,7 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 const hpForTurnPopulate = (structure: ParsingStructure, replay: Replay, allCards: AllCardsService) => {
 	return (currentTurn) => {
 		for (const playerCardId of Object.keys(structure.playerHps)) {
-			if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBobBattlegrounds) {
+			if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBob) {
 				continue;
 			}
 			const currentHps = [...(structure.hpOverTurn[playerCardId] || [])];

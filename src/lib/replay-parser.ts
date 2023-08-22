@@ -10,6 +10,7 @@ import {
 } from '@firestone-hs/reference-data';
 import bigInt from 'big-integer';
 import { Element, ElementTree, parse } from 'elementtree';
+import { extractAnomalies, extractHasBgsAnomalies } from './exrtactors/battlegrounds/anomalies-extractor';
 import { heroPickExtractor } from './exrtactors/battlegrounds/hero-pick-extractor';
 import { extractHasBgsQuests, extractHeroQuests } from './exrtactors/battlegrounds/quests-extractor';
 import { Replay } from './model/replay';
@@ -124,6 +125,9 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	const hasBgsQuests = isBgGame ? extractHasBgsQuests(elementTree) : null;
 	const bgsHeroQuests = isBgGame && hasBgsQuests ? extractHeroQuests(elementTree, mainPlayerId, allCards) : null;
 
+	const hasBgsAnomalies = isBgGame ? extractHasBgsAnomalies(elementTree) : null;
+	const anomalies = isBgGame && hasBgsAnomalies ? extractAnomalies(elementTree) : null;
+
 	return Object.assign(new Replay(), {
 		replay: elementTree,
 		mainPlayerId: mainPlayerId,
@@ -145,6 +149,8 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 		playCoin: playCoin,
 		hasBgsQuests: hasBgsQuests,
 		bgsHeroQuests: bgsHeroQuests,
+		hasBgsAnomalies: hasBgsAnomalies,
+		bgsAnomalies: anomalies,
 	} as Replay);
 };
 
@@ -234,7 +240,7 @@ const extractHeroPowerCardId = (
 
 const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): string => {
 	const winChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WON}']`);
-	if (!!winChanges?.length) {
+	if (winChanges?.length) {
 		// Because mercenaries introduce another player that mimics the main player, but with another
 		// entity ID, we need to look at all the tags
 		return winChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
@@ -244,19 +250,19 @@ const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): st
 	const winningChanges = elementTree.findall(
 		`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WINNING}']`,
 	);
-	if (!!winningChanges?.length) {
+	if (winningChanges?.length) {
 		return winningChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
 	}
 
 	// Same comment with LOSE / LOSING
 	const loseChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOST}']`);
-	if (!!loseChanges?.length) {
+	if (loseChanges?.length) {
 		return loseChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
 	}
 	const losingChanges = elementTree.findall(
 		`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOSING}']`,
 	);
-	if (!!losingChanges?.length) {
+	if (losingChanges?.length) {
 		return losingChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
 	}
 
