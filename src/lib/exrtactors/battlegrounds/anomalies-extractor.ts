@@ -9,9 +9,15 @@ export const extractHasBgsAnomalies = (elementTree: ElementTree): boolean => {
 };
 
 export const extractAnomalies = (elementTree: ElementTree): readonly string[] => {
-	return elementTree
-		.findall(`.//FullEntity`)
-		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.BATTLEGROUND_ANOMALY}']`))
-		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.ZONE}'][@value='${Zone.PLAY}']`))
-		.map((e) => e.get('cardID'));
+	return [
+		...new Set(
+			elementTree
+				.findall(`.//FullEntity`)
+				.filter((entity) =>
+					entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.BATTLEGROUND_ANOMALY}']`),
+				)
+				.filter((entity) => entity.find(`.Tag[@tag='${GameTag.ZONE}'][@value='${Zone.PLAY}']`))
+				.map((e) => e.get('cardID')),
+		),
+	];
 };
