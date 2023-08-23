@@ -43,7 +43,10 @@ export const buildPostMatchStats = (
 		battleResultHistory: battleResultHistory,
 		faceOffs: faceOffs,
 		highestWinStreak: player?.highestWinStreak,
-	} as BgsPostMatchStats;
+		playerIdToCardIdMapping: structure.playerIdToCardIdMapping,
+		leaderboardPositionOverTurn: structure.leaderboardPositionOverTurn,
+		replayLink: undefined,
+	};
 	return postMatchStats;
 };
 

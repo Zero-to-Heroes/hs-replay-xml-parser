@@ -2,7 +2,6 @@
 import {
 	AllCardsService,
 	BlockType,
-	CardIds,
 	CardType,
 	GameTag,
 	MetaTags,
@@ -28,6 +27,7 @@ export const reparseReplay = (
 	replay: Replay,
 	allCards: AllCardsService,
 ): {
+	playerIdToCardIdMapping: { [playerId: string]: string };
 	boardHistory: readonly BgsBoard[];
 	rerollsOverTurn: readonly NumericTurnInfo[];
 	freezesOverTurn: readonly NumericTurnInfo[];
@@ -36,13 +36,14 @@ export const reparseReplay = (
 	minionsSoldOverTurn: readonly NumericTurnInfo[];
 	mainPlayerHeroPowersOverTurn: readonly NumericTurnInfo[];
 	wentFirstInBattleOverTurn: readonly BooleanTurnInfo[];
-	hpOverTurn: { [playerCardId: string]: readonly NumericTurnInfo[] };
+	hpOverTurn: { [playerId: string]: readonly NumericTurnInfo[] };
 	totalStatsOverTurn: readonly NumericTurnInfo[];
 	damageToEnemyHeroOverTurn: readonly ComplexTurnInfo<ValueHeroInfo>[];
 	totalMinionsDamageDealt: { [cardId: string]: number };
 	totalMinionsDamageTaken: { [cardId: string]: number };
 	totalEnemyMinionsKilled: number;
 	totalEnemyHeroesKilled: number;
+	leaderboardPositionOverTurn: { [playerId: string]: readonly NumericTurnInfo[] };
 } => {
 	if (!replay) {
 		return {} as any;
@@ -89,6 +90,7 @@ export const reparseReplay = (
 		minionsBoughtIds: [],
 		minionsDamageDealt: {},
 		minionsDamageReceived: {},
+		playerIdToCardIdMapping: {},
 	};
 
 	const playerEntities = extractAllPlayerEntities(replay.mainPlayerId, replay.opponentPlayerId, replay.replay);
@@ -103,23 +105,35 @@ export const reparseReplay = (
 	}
 	const mainPlayerEntityId: string = mainPlayerEntity.get('id');
 	for (const entity of playerEntities) {
-		const playerCardId = normalizeHeroCardId(entity.get('cardID'), allCards);
-		if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBob) {
+		let playerId = entity.find(`.Tag[@tag='${GameTag.PLAYER_ID}']`)?.get('value');
+		// The main player isn't handled that way
+		if (playerId == null) {
+			const mainPlayerEntity = replay.replay.find(`.//Player[@isMainPlayer="true"]`);
+			if (
+				entity.find(`./Tag[@tag='${GameTag.CONTROLLER}']`)?.get('value') === mainPlayerEntity?.get('playerID')
+			) {
+				playerId = mainPlayerEntity?.get('playerID');
+			}
+		}
+		if (!playerId) {
 			continue;
 		}
+		// Modify the entities to that we can always refer to it easily
+		entity.attrib['playerId'] = playerId;
 		try {
-			structure.playerHps[playerCardId] = {
+			structure.playerHps[playerId] = {
 				startingHp: parseInt(entity.find(`Tag[@tag="${GameTag.HEALTH}"]`)?.get('value')) || 30,
 				damage: parseInt(entity.find(`Tag[@tag="${GameTag.DAMAGE}"]`)?.get('value')) || 0,
 				armor: parseInt(entity.find(`Tag[@tag="${GameTag.ARMOR}"]`)?.get('value')) || 0,
 			};
+			structure.playerIdToCardIdMapping[playerId] = entity.get('cardID');
 		} catch (e) {
 			console.error(
 				'Could not set starting hp',
-				playerCardId,
+				playerId,
 				entity.findall('.//Tag').map((t) => ({ name: t.get('tag'), value: t.get('value') })),
 			);
-			structure.playerHps[playerCardId] = {
+			structure.playerHps[playerId] = {
 				startingHp: 30,
 				damage: 0,
 				armor: 0,
@@ -253,7 +267,7 @@ export const reparseReplay = (
 		)
 		.valueSeq()
 		.toArray();
-	const hpOverTurn: { [playerCardId: string]: readonly NumericTurnInfo[] } = structure.hpOverTurn;
+	const hpOverTurn: { [playerId: string]: readonly NumericTurnInfo[] } = structure.hpOverTurn;
 	const totalStatsOverTurn: readonly NumericTurnInfo[] = structure.totalStatsOverTurn
 		.map((stats: number, turn: number) => {
 			return {
@@ -293,6 +307,8 @@ export const reparseReplay = (
 		totalEnemyMinionsKilled: totalEnemyMinionsKilled,
 		totalEnemyHeroesKilled: totalEnemyHeroesKilled,
 		wentFirstInBattleOverTurn: wentFirstInBattleOverTurn,
+		leaderboardPositionOverTurn: structure.leaderboardPositionOverTurn,
+		playerIdToCardIdMapping: structure.playerIdToCardIdMapping,
 	};
 };
 
@@ -302,60 +318,41 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 			element.tag === 'TagChange' &&
 			parseInt(element.get('value')) > 0 &&
 			parseInt(element.get('tag')) === GameTag.DAMAGE &&
-			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
+			playerEntities.map((entity) => entity.get('id')).includes(element.get('entity'))
 		) {
-			const playerCardId = normalizeHeroCardId(
-				playerEntities
-					.find(
-						(entity) =>
-							normalizeHeroCardId(entity.get('id'), allCards) ===
-							normalizeHeroCardId(element.get('entity'), allCards),
-					)
-					.get('cardID'),
-				allCards,
-			);
-
-			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBob) {
-				structure.playerHps[playerCardId].damage = parseInt(element.get('value'));
-			}
+			// console.debug('will get player entity');
+			const playerEntity = playerEntities.find((entity) => entity.get('id') === element.get('entity'));
+			// console.debug('got player entity', playerEntity);
+			const playerId = playerEntity.get('playerId');
+			// console.debug('got player id', playerId);
+			structure.playerHps[playerId].damage = parseInt(element.get('value'));
 		}
 
 		if (
 			element.tag === 'TagChange' &&
 			parseInt(element.get('tag')) === GameTag.ARMOR &&
-			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
+			playerEntities.map((entity) => entity.get('id')).includes(element.get('entity'))
 		) {
-			const playerCardId = normalizeHeroCardId(
-				playerEntities
-					.find(
-						(entity) =>
-							normalizeHeroCardId(entity.get('id'), allCards) ===
-							normalizeHeroCardId(element.get('entity'), allCards),
-					)
-					.get('cardID'),
-				allCards,
-			);
-
-			if (normalizeHeroCardId(playerCardId, allCards) !== CardIds.BartenderBob) {
-				structure.playerHps[playerCardId].armor = parseInt(element.get('value'));
-			}
+			// console.debug('will get player entity 2');
+			const playerEntity = playerEntities.find((entity) => entity.get('id') === element.get('entity'));
+			// console.debug('got player entity 2', playerEntity);
+			const playerId = playerEntity.get('playerId');
+			// console.debug('got player id 2', playerId);
+			structure.playerHps[playerId].armor = parseInt(element.get('value'));
 		}
 	};
 };
 
 const hpForTurnPopulate = (structure: ParsingStructure, replay: Replay, allCards: AllCardsService) => {
 	return (currentTurn) => {
-		for (const playerCardId of Object.keys(structure.playerHps)) {
-			if (normalizeHeroCardId(playerCardId, allCards) === CardIds.BartenderBob) {
-				continue;
-			}
-			const currentHps = [...(structure.hpOverTurn[playerCardId] || [])];
-			const playerHp = structure.playerHps[playerCardId];
+		for (const playerId of Object.keys(structure.playerHps)) {
+			const currentHps = [...(structure.hpOverTurn[playerId] || [])];
+			const playerHp = structure.playerHps[playerId];
 			currentHps.push({
 				turn: currentTurn,
 				value: playerHp.startingHp + playerHp.armor - playerHp.damage,
 			});
-			structure.hpOverTurn[playerCardId] = currentHps;
+			structure.hpOverTurn[playerId] = currentHps;
 		}
 	};
 };
@@ -371,30 +368,23 @@ const leaderboardForTurnParse = (
 			parseInt(element.get('tag')) === GameTag.PLAYER_LEADERBOARD_PLACE &&
 			playerEntities.map((entity) => entity.get('id')).indexOf(element.get('entity')) !== -1
 		) {
-			const playerCardId = normalizeHeroCardId(
-				playerEntities
-					.find(
-						(entity) =>
-							normalizeHeroCardId(entity.get('id'), allCards) ===
-							normalizeHeroCardId(element.get('entity'), allCards),
-					)
-					.get('cardID'),
-				allCards,
-			);
-			structure.leaderboardPositions[playerCardId] = parseInt(element.get('value'));
+			const playerId = playerEntities
+				.find((entity) => (entity.get('id'), allCards) === (element.get('entity'), allCards))
+				.get('playerId');
+			structure.leaderboardPositions[playerId] = parseInt(element.get('value'));
 		}
 	};
 };
 
 const leaderboardForTurnPopulate = (structure: ParsingStructure, replay: Replay) => {
 	return (currentTurn) => {
-		for (const playerCardId of Object.keys(structure.leaderboardPositions)) {
-			const currentLeaderboards = [...(structure.leaderboardPositionOverTurn[playerCardId] || [])];
+		for (const playerId of Object.keys(structure.leaderboardPositions)) {
+			const currentLeaderboards = [...(structure.leaderboardPositionOverTurn[playerId] || [])];
 			currentLeaderboards.push({
 				turn: currentTurn,
-				value: structure.leaderboardPositions[playerCardId],
+				value: structure.leaderboardPositions[playerId],
 			});
-			structure.leaderboardPositionOverTurn[playerCardId] = currentLeaderboards;
+			structure.leaderboardPositionOverTurn[playerId] = currentLeaderboards;
 		}
 	};
 };

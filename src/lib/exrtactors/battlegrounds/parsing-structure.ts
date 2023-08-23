@@ -27,15 +27,16 @@ export interface ParsingStructure {
 			tags: Map<string, number>;
 		};
 	};
+	playerIdToCardIdMapping: { [playerId: string]: string };
 	playerHps: {
-		[cardId: string]: {
+		[playerId: string]: {
 			startingHp: number;
 			damage: number;
 			armor: number;
 		};
 	};
 	leaderboardPositions: {
-		[cardId: string]: number;
+		[playerId: string]: number;
 	};
 	mainEnchantEntityIds: string[];
 	mainPlayerHeroPowerIds: string[];
@@ -66,6 +67,6 @@ export interface ParsingStructure {
 	minionsSoldOverTurn: Map<number, number>;
 	minionsBoughtOverTurn: Map<number, number>;
 	totalStatsOverTurn: Map<number, number>;
-	hpOverTurn: { [playerCardId: string]: readonly NumericTurnInfo[] };
-	leaderboardPositionOverTurn: { [playerCardId: string]: readonly NumericTurnInfo[] };
+	hpOverTurn: { [playerId: string]: readonly NumericTurnInfo[] };
+	leaderboardPositionOverTurn: { [playerId: string]: readonly NumericTurnInfo[] };
 }

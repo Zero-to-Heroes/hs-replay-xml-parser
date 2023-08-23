@@ -13,6 +13,8 @@ export interface BgsPostMatchStats {
 
 	readonly replayLink: string;
 
+	readonly playerIdToCardIdMapping: { [playerId: string]: string };
+
 	readonly boardHistory: readonly BgsBoard[];
 	readonly compositionsOverTurn: readonly BgsComposition[];
 	readonly rerollsOverTurn: readonly NumericTurnInfo[];
