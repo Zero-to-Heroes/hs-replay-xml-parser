@@ -106,6 +106,16 @@ export const reparseReplay = (
 	const mainPlayerEntityId: string = mainPlayerEntity.get('id');
 	for (const entity of playerEntities) {
 		let playerId = entity.find(`.Tag[@tag='${GameTag.PLAYER_ID}']`)?.get('value');
+		// Heroes that transform
+
+		if (playerId == null && entity.find(`.Tag[@tag='${GameTag.CREATOR}']`)) {
+			const normalizedHeroCardId = normalizeHeroCardId(entity.get('cardID'), allCards);
+			if (normalizedHeroCardId) {
+				playerId = Object.keys(structure.playerIdToCardIdMapping).find(
+					(playerId) => structure.playerIdToCardIdMapping[playerId] === normalizedHeroCardId,
+				);
+			}
+		}
 		// The main player isn't handled that way
 		if (playerId == null) {
 			const mainPlayerEntity = replay.replay.find(`.//Player[@isMainPlayer="true"]`);
@@ -120,6 +130,7 @@ export const reparseReplay = (
 		}
 		// Modify the entities to that we can always refer to it easily
 		entity.attrib['playerId'] = playerId;
+		// console.debug('created player entity', playerId, entity.attrib);
 		try {
 			structure.playerHps[playerId] = {
 				startingHp: parseInt(entity.find(`Tag[@tag="${GameTag.HEALTH}"]`)?.get('value')) || 30,
@@ -140,6 +151,8 @@ export const reparseReplay = (
 			};
 		}
 	}
+	// console.debug('structure playerIdToCardIdMapping', structure.playerIdToCardIdMapping);
+	// console.debug('structure playerHps', structure.playerHps);
 
 	const opponentHeroEntityIds = extractHeroEntityIds(replay, replay.opponentPlayerId);
 
@@ -325,7 +338,11 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 			// console.debug('got player entity', playerEntity);
 			const playerId = playerEntity.get('playerId');
 			// console.debug('got player id', playerId);
-			structure.playerHps[playerId].damage = parseInt(element.get('value'));
+			if (!structure.playerHps[playerId]) {
+				console.error('missing playerId for playerHps', playerId);
+			} else {
+				structure.playerHps[playerId].damage = parseInt(element.get('value'));
+			}
 		}
 
 		if (
@@ -338,7 +355,16 @@ const hpForTurnParse = (structure: ParsingStructure, playerEntities: readonly El
 			// console.debug('got player entity 2', playerEntity);
 			const playerId = playerEntity.get('playerId');
 			// console.debug('got player id 2', playerId);
-			structure.playerHps[playerId].armor = parseInt(element.get('value'));
+			if (!structure.playerHps[playerId]) {
+				console.error(
+					'missing playerId for armor',
+					playerId,
+					playerEntity.attrib,
+					playerEntity.findall('.//Tag').map((t) => t.attrib),
+				);
+			} else {
+				structure.playerHps[playerId].armor = parseInt(element.get('value'));
+			}
 		}
 	};
 };
