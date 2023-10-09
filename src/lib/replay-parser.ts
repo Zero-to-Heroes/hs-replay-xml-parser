@@ -246,18 +246,22 @@ const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): st
 		return winChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
 	}
 
+	const loseChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOST}']`);
+	if (loseChanges?.length) {
+		return loseChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
+	}
+
+	const tieChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.TIED}']`);
+	if (tieChanges?.length) {
+		return 'tied';
+	}
+
 	// For some reason when conceding (early?) in mercs, the WON state never shows up
 	const winningChanges = elementTree.findall(
 		`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WINNING}']`,
 	);
 	if (winningChanges?.length) {
 		return winningChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'won' : 'lost';
-	}
-
-	// Same comment with LOSE / LOSING
-	const loseChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOST}']`);
-	if (loseChanges?.length) {
-		return loseChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
 	}
 	const losingChanges = elementTree.findall(
 		`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.LOSING}']`,
@@ -266,8 +270,7 @@ const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): st
 		return losingChanges.some((winChange) => mainPlayerEntityId === winChange.get('entity')) ? 'lost' : 'won';
 	}
 
-	const tieChange = elementTree.find(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.TIED}']`);
-	return tieChange ? 'tied' : 'unknown';
+	return 'unknown';
 };
 
 const extarctPlayCoin = (mainPlayerEntityId: string, elementTree: ElementTree): string => {
