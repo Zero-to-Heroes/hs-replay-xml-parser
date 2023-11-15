@@ -642,7 +642,7 @@ const damageDealtByMinionsParse = (structure: ParsingStructure, replay: Replay) 
 					infos.forEach((info) => {
 						const damagedEntity = structure.entities[info.get('entity')];
 						if (!damagedEntity) {
-							console.warn('Could not find damaged entity', info.get('entity'), actionEntity);
+							console.warn('Could not find damaged entity', info.get('entity'));
 							return;
 						}
 						// We are damaged, so add the info
@@ -719,8 +719,16 @@ const damageDealtToEnemyHeroParse = (
 			if (!infos || infos.length === 0) {
 				return;
 			}
+
+			const entity = infos[0].get('entity');
+			// Sometimes the FullEntity arrives only after, which is really strange
+			if (!structure.entities[entity]) {
+				console.warn('entity not created yet', entity);
+				return;
+			}
+
 			structure.damageToEnemyHeroForTurn = {
-				enemyHeroCardId: structure.entities[infos[0].get('entity')].cardId,
+				enemyHeroCardId: structure.entities[entity].cardId,
 				value: parseInt(element.get('data')),
 			};
 		}
