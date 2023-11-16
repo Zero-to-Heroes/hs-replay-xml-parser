@@ -21,8 +21,8 @@ export interface BgsPostMatchStats {
 	readonly freezesOverTurn: readonly NumericTurnInfo[];
 	readonly coinsWastedOverTurn: readonly NumericTurnInfo[];
 	readonly mainPlayerHeroPowersOverTurn: readonly NumericTurnInfo[];
-	readonly hpOverTurn: { [playerCardId: string]: readonly NumericTurnInfo[] };
-	readonly leaderboardPositionOverTurn: { [playerCardId: string]: readonly NumericTurnInfo[] };
+	readonly hpOverTurn: { [playerId: string]: readonly NumericTurnInfo[] };
+	readonly leaderboardPositionOverTurn: { [playerId: string]: readonly NumericTurnInfo[] };
 	readonly totalStatsOverTurn: readonly NumericTurnInfo[];
 	readonly wentFirstInBattleOverTurn: readonly BooleanTurnInfo[];
 	readonly damageToEnemyHeroOverTurn: readonly ComplexTurnInfo<ValueHeroInfo>[];
