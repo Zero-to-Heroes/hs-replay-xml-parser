@@ -1,12 +1,9 @@
 import { CardType, GameTag, Zone } from '@firestone-hs/reference-data';
-import { Element } from 'elementtree';
+import { Element, ElementTree } from 'elementtree';
 
-export const heroPickExtractor = (
-	allFullEntities: readonly Element[],
-	allChosenEntities: readonly Element[],
-	mainPlayerId: number,
-): [readonly Element[], Element] => {
-	const pickOptions = allFullEntities
+export const heroPickExtractor = (elementTree: ElementTree, mainPlayerId: number): [readonly Element[], Element] => {
+	const pickOptions = elementTree
+		.findall(`.//FullEntity`)
 		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.HERO}']`))
 		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${mainPlayerId}']`))
 		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.ZONE}'][@value='${Zone.HAND}']`))
@@ -17,7 +14,8 @@ export const heroPickExtractor = (
 		);
 	const pickOptionIds = pickOptions.map((option) => option?.get('id')) ?? [];
 	// console.log('pickOptionIds', pickOptionIds);
-	const pickedHero = allChosenEntities
+	const pickedHero = elementTree
+		.findall(`.//ChosenEntities`)
 		.filter((chosenEntities) => {
 			const choice = chosenEntities.find('.//Choice');
 			if (!choice) {

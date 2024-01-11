@@ -1,5 +1,5 @@
 import { AllCardsService, BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
-import { Element, ElementTree } from 'elementtree';
+import { ElementTree } from 'elementtree';
 import { BgsHeroQuest } from '../../model/replay';
 
 export const extractHasBgsQuests = (elementTree: ElementTree): boolean => {
@@ -9,15 +9,13 @@ export const extractHasBgsQuests = (elementTree: ElementTree): boolean => {
 };
 
 export const extractHeroQuests = (
-	allFullEntities: readonly Element[],
-	allChosenEntities: readonly Element[],
-	allTagChanges: readonly Element[],
-	allBlocks: readonly Element[],
+	elementTree: ElementTree,
 	mainPlayerId: number,
 	allCards: AllCardsService,
 ): readonly BgsHeroQuest[] => {
 	// TODO: Sire D.
-	const questOptions = allFullEntities
+	const questOptions = elementTree
+		.findall(`.//FullEntity`)
 		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.SPELL}']`))
 		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${mainPlayerId}']`))
 		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.ZONE}'][@value='${Zone.SETASIDE}']`))
@@ -25,7 +23,8 @@ export const extractHeroQuests = (
 	// console.log('questOptions', questOptions, mainPlayerId);
 	const questOptionIds = questOptions.map((option) => option?.get('id')) ?? [];
 	// console.log('questOptionIds', questOptionIds);
-	const pickedQuest = allChosenEntities
+	const pickedQuest = elementTree
+		.findall(`.//ChosenEntities`)
 		.filter((chosenEntities) => {
 			const choice = chosenEntities.find('.//Choice');
 			if (!choice) {
@@ -44,35 +43,27 @@ export const extractHeroQuests = (
 	if (!questCardId?.length) {
 		return [];
 	}
-	const questDifficulty = +allTagChanges
-		.filter((tagChange) => tagChange.get('entity') === pickedQuestEntityId)
-		.filter((tagChange) => tagChange.get('tag') === `${GameTag.QUEST_PROGRESS_TOTAL}`)
-		.map((tagChange) => tagChange.get('value'))
-		.pop();
+	const questDifficulty = +elementTree
+		.findall(`.//TagChange[@tag='${GameTag.QUEST_PROGRESS_TOTAL}'][@entity='${pickedQuestEntityId}']`)
+		.filter((t) => t.get('value') != '0')
+		.pop()
+		?.get('value');
 	console.log('questCardId=', questCardId, 'questDifficulty=', questDifficulty);
 
-	const questRewardDbfId = +allTagChanges
-		.filter((tagChange) => tagChange.get('entity') === pickedQuestEntityId)
-		.filter((tagChange) => tagChange.get('tag') === `${GameTag.QUEST_REWARD_DATABASE_ID}`)
-		.map((tagChange) => tagChange.get('value'))
-		.pop();
+	const questRewardDbfId = +elementTree
+		.find(`.//TagChange[@tag='${GameTag.QUEST_REWARD_DATABASE_ID}'][@entity='${pickedQuestEntityId}']`)
+		?.get('value');
 	const questRewardCardId = allCards.getCardFromDbfId(questRewardDbfId).id;
 	console.log('questRewardCardId=', questRewardCardId);
 
-	const turnsCompletedElements = allTagChanges
-		.filter((tagChange) => tagChange.get('entity') === pickedQuestEntityId)
-		.filter((tagChange) => tagChange.get('tag') === `${GameTag.NUM_TURNS_IN_PLAY}`)
-		.filter((tagChange) => tagChange.get('value') !== '0');
+	const turnsCompletedElements = elementTree
+		.findall(`.//TagChange[@tag='${GameTag.NUM_TURNS_IN_PLAY}'][@entity='${pickedQuestEntityId}']`)
+		.filter((el) => el.get('value') !== '0');
 	console.log(
 		'els',
 		turnsCompletedElements.map((el) => el.get('value')),
 	);
-	const isCompleted = !!allBlocks.find(
-		(block) =>
-			block.get('type') === `${BlockType.TRIGGER}` &&
-			block.get('entity') === pickedQuestEntityId &&
-			block.get('cardId') === questCardId,
-	);
+	const isCompleted = !!elementTree.find(`.//Block[@type='${BlockType.TRIGGER}'][@entity='${pickedQuestEntityId}']`);
 	const turnsCompleted =
 		isCompleted && turnsCompletedElements?.length
 			? +turnsCompletedElements[turnsCompletedElements.length - 1]?.get('value')
