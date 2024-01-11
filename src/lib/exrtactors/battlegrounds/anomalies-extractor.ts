@@ -1,5 +1,5 @@
 import { CardType, GameTag, Zone } from '@firestone-hs/reference-data';
-import { ElementTree } from 'elementtree';
+import { Element, ElementTree } from 'elementtree';
 
 export const extractHasBgsAnomalies = (elementTree: ElementTree): boolean => {
 	return !!elementTree
@@ -8,11 +8,10 @@ export const extractHasBgsAnomalies = (elementTree: ElementTree): boolean => {
 		?.get('value');
 };
 
-export const extractAnomalies = (elementTree: ElementTree): readonly string[] => {
+export const extractAnomalies = (allFullEntities: readonly Element[]): readonly string[] => {
 	return [
 		...new Set(
-			elementTree
-				.findall(`.//FullEntity`)
+			allFullEntities
 				.filter((entity) =>
 					entity.find(`.Tag[@tag='${GameTag.CARDTYPE}'][@value='${CardType.BATTLEGROUND_ANOMALY}']`),
 				)
