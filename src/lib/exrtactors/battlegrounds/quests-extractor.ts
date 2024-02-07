@@ -36,7 +36,7 @@ export const extractHeroQuests = (
 		.map((entity) => entity.find(`.//Choice`));
 	// console.log('pickedQuest', pickedQuest);
 	const pickedQuestEntityId = pickedQuest[0]?.get('entity') ?? -1;
-	console.log('pickedQuestEntityId', pickedQuestEntityId);
+	// console.log('pickedQuestEntityId', pickedQuestEntityId);
 	const pickedQuestFullEntity = questOptions.find((option) => option?.get('id') === pickedQuestEntityId);
 	// console.log('pickedQuestFullEntity', pickedQuestFullEntity);
 	const questCardId = pickedQuestFullEntity?.get('cardID');
@@ -48,21 +48,21 @@ export const extractHeroQuests = (
 		.filter((t) => t.get('value') != '0')
 		.pop()
 		?.get('value');
-	console.log('questCardId=', questCardId, 'questDifficulty=', questDifficulty);
+	// console.log('questCardId=', questCardId, 'questDifficulty=', questDifficulty);
 
 	const questRewardDbfId = +elementTree
 		.find(`.//TagChange[@tag='${GameTag.QUEST_REWARD_DATABASE_ID}'][@entity='${pickedQuestEntityId}']`)
 		?.get('value');
 	const questRewardCardId = allCards.getCardFromDbfId(questRewardDbfId).id;
-	console.log('questRewardCardId=', questRewardCardId);
+	// console.log('questRewardCardId=', questRewardCardId);
 
 	const turnsCompletedElements = elementTree
 		.findall(`.//TagChange[@tag='${GameTag.NUM_TURNS_IN_PLAY}'][@entity='${pickedQuestEntityId}']`)
 		.filter((el) => el.get('value') !== '0');
-	console.log(
-		'els',
-		turnsCompletedElements.map((el) => el.get('value')),
-	);
+	// console.log(
+	// 	'els',
+	// 	turnsCompletedElements.map((el) => el.get('value')),
+	// );
 	const isCompleted = !!elementTree.find(`.//Block[@type='${BlockType.TRIGGER}'][@entity='${pickedQuestEntityId}']`);
 	const turnsCompleted =
 		isCompleted && turnsCompletedElements?.length

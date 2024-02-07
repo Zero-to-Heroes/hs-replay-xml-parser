@@ -33,7 +33,7 @@ const INNKEEPER_NAMES = [
 
 export const buildReplayFromXml = (replayString: string, allCards: AllCardsService): Replay => {
 	if (!replayString || replayString.length === 0) {
-		console.log('no replay string');
+		console.warn('no replay string');
 		return null;
 	}
 	// http://effbot.org/zone/element-xpath.htm

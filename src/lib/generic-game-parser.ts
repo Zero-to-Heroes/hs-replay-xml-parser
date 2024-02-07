@@ -5,7 +5,7 @@ import { Replay } from './model/replay';
 export const parseGame = (replay: Replay, parsers: readonly Parser[]) => {
 	const opponentPlayerElement = replay.replay
 		.findall('.//Player')
-		.find(player => player.get('isMainPlayer') === 'false');
+		.find((player) => player.get('isMainPlayer') === 'false');
 	const opponentPlayerEntityId = opponentPlayerElement.get('id');
 	const structure: ParsingStructure = {
 		entities: {},
@@ -15,10 +15,10 @@ export const parseGame = (replay: Replay, parsers: readonly Parser[]) => {
 	};
 	const parserFunctions: readonly ((element: Element) => void)[] = [
 		compositionForTurnParse(structure),
-		...structure.parsers.map(parser => parser.parse(structure)),
+		...structure.parsers.map((parser) => parser.parse(structure)),
 	];
 	const populateFunctions: readonly ((currentTurn: number) => void)[] = [
-		...structure.parsers.map(parser => parser.populate(structure)),
+		...structure.parsers.map((parser) => parser.populate(structure)),
 	];
 	parseElement(
 		replay.replay.getroot(),
@@ -31,10 +31,9 @@ export const parseGame = (replay: Replay, parsers: readonly Parser[]) => {
 	);
 };
 
-
 // While we don't use the metric, the entity info that is populated is useful for other extractors
 const compositionForTurnParse = (structure: ParsingStructure) => {
-	return element => {
+	return (element) => {
 		if (element.tag === 'GameEntity') {
 			structure.gameEntityId = parseInt(element.get('id'));
 			structure.entities[structure.gameEntityId] = {
@@ -65,9 +64,6 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				),
 				summonedInCombat: structure.entities[structure.gameEntityId].boardVisualState === 2,
 			};
-			// if (structure.entities[element.get('id')].cardType === CardType.HERO) {
-			// 	console.debug('hero', structure.entities[element.get('id')]);
-			// }
 		}
 		if (structure.entities[element.get('entity')]) {
 			if (parseInt(element.get('tag')) === GameTag.CONTROLLER) {
@@ -111,14 +107,14 @@ const parseElement = (
 	parseFunctions: readonly ((element: Element) => void)[],
 	populateFunctions: readonly ((currentTurn: number) => void)[],
 ) => {
-	parseFunctions.forEach(parseFunction => parseFunction(element));
+	parseFunctions.forEach((parseFunction) => parseFunction(element));
 	if (element.tag === 'TagChange') {
 		if (
 			parseInt(element.get('tag')) === GameTag.NEXT_STEP &&
 			parseInt(element.get('value')) === Step.MAIN_START_TRIGGERS
 		) {
 			if (parent && parent.get('entity') === opponentPlayerEntityId) {
-				populateFunctions.forEach(populateFunction => populateFunction(turnCountWrapper.currentTurn));
+				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
 				turnCountWrapper.currentTurn++;
 			}
 		}
@@ -127,7 +123,7 @@ const parseElement = (
 			[PlayState.WON, PlayState.LOST].indexOf(parseInt(element.get('value'))) !== -1
 		) {
 			if (element.get('entity') === opponentPlayerEntityId) {
-				populateFunctions.forEach(populateFunction => populateFunction(turnCountWrapper.currentTurn));
+				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
 				turnCountWrapper.currentTurn++;
 			}
 		}
