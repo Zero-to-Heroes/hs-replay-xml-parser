@@ -1,4 +1,4 @@
-import { AllCardsService, BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
+import { AllCardsService, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
 import { ElementTree } from 'elementtree';
 import { BgsHeroQuest } from '../../model/replay';
 
@@ -11,6 +11,7 @@ export const extractHasBgsQuests = (elementTree: ElementTree): boolean => {
 export const extractHeroQuests = (
 	elementTree: ElementTree,
 	mainPlayerId: number,
+	playerHeroEntityId: number,
 	allCards: AllCardsService,
 ): readonly BgsHeroQuest[] => {
 	// TODO: Sire D.
@@ -36,6 +37,8 @@ export const extractHeroQuests = (
 		.map((entity) => entity.find(`.//Choice`));
 	// console.log('pickedQuest', pickedQuest);
 	const pickedQuestEntityId = pickedQuest[0]?.get('entity') ?? -1;
+	// console.log('mainPlayerId=', mainPlayerId);
+	// console.log('playerHeroEntityId=', playerHeroEntityId);
 	// console.log('pickedQuestEntityId', pickedQuestEntityId);
 	const pickedQuestFullEntity = questOptions.find((option) => option?.get('id') === pickedQuestEntityId);
 	// console.log('pickedQuestFullEntity', pickedQuestFullEntity);
@@ -63,7 +66,10 @@ export const extractHeroQuests = (
 	// 	'els',
 	// 	turnsCompletedElements.map((el) => el.get('value')),
 	// );
-	const isCompleted = !!elementTree.find(`.//Block[@type='${BlockType.TRIGGER}'][@entity='${pickedQuestEntityId}']`);
+	// const isCompleted = !!elementTree.find(`.//Block[@type='${BlockType.TRIGGER}'][@entity='${pickedQuestEntityId}']`);
+	const isCompleted = !!elementTree.find(
+		`.//TagChange[@tag='${GameTag.BACON_QUEST_COMPLETED}'][@value='1'][@entity='${playerHeroEntityId}']`,
+	);
 	const turnsCompleted =
 		isCompleted && turnsCompletedElements?.length
 			? +turnsCompletedElements[turnsCompletedElements.length - 1]?.get('value')

@@ -70,7 +70,12 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	const mainPlayerName = mainPlayerElement.get('name');
 	const mainPlayerEntityId = mainPlayerElement.get('id');
 	// console.debug('main player', mainPlayerId, mainPlayerName, mainPlayerEntityId);
-	const mainPlayerCardId = extractPlayerCardId(mainPlayerElement, mainPlayerEntityId, elementTree, allCards);
+	const { heroCardId: mainPlayerCardId, heroEntityId: playerHeroEntityId } = extractPlayerCardId(
+		mainPlayerElement,
+		mainPlayerEntityId,
+		elementTree,
+		allCards,
+	);
 	const mainPlayerHeroPowerCardId = extractHeroPowerCardId(mainPlayerId, elementTree, allCards);
 
 	const region: BnetRegion = bigInt(parseInt(mainPlayerElement.get('accountHi')))
@@ -85,7 +90,7 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	const opponentPlayerElement = [...opponentCandidates].pop();
 	const opponentPlayerId = parseInt(opponentPlayerElement.get('playerID'));
 	const opponentPlayerEntityId = opponentPlayerElement.get('id');
-	const opponentPlayerCardId = extractPlayerCardId(
+	const { heroCardId: opponentPlayerCardId, heroEntityId: opponentHeroEntityId } = extractPlayerCardId(
 		opponentPlayerElement,
 		opponentPlayerEntityId,
 		elementTree,
@@ -123,7 +128,8 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 
 	// BG-specific stuff
 	const hasBgsQuests = isBgGame ? extractHasBgsQuests(elementTree) : null;
-	const bgsHeroQuests = isBgGame && hasBgsQuests ? extractHeroQuests(elementTree, mainPlayerId, allCards) : null;
+	const bgsHeroQuests =
+		isBgGame && hasBgsQuests ? extractHeroQuests(elementTree, mainPlayerId, playerHeroEntityId, allCards) : null;
 
 	const hasBgsAnomalies = isBgGame ? extractHasBgsAnomalies(elementTree) : null;
 	const anomalies = isBgGame && hasBgsAnomalies ? extractAnomalies(elementTree) : null;
@@ -159,12 +165,16 @@ const extractPlayerCardId = (
 	playerEntityId: string,
 	elementTree: ElementTree,
 	allCards: AllCardsService = null,
-): string => {
-	const heroEntityId = playerElement.find(`.//Tag[@tag='${GameTag.HERO_ENTITY}']`)?.get('value');
+): {
+	heroCardId: string;
+	heroEntityId: number;
+} => {
+	let heroEntityId = playerElement.find(`.//Tag[@tag='${GameTag.HERO_ENTITY}']`)?.get('value');
 	// Mercenaries don't have a hero entity id
 	if (!heroEntityId) {
 		return null;
 	}
+
 	const heroEntity = elementTree.find(`.//FullEntity[@id='${heroEntityId}']`);
 	let cardId = heroEntity.get('cardID');
 	// Battlegrounds assigns TB_BaconShop_HERO_PH at the start and then changes to the real hero
@@ -178,6 +188,7 @@ const extractPlayerCardId = (
 			console.warn('Could not identify hero from picks', pickedPlayedHero);
 		} else {
 			cardId = newHero.get('cardID');
+			heroEntityId = newHero.get('id');
 		}
 	}
 
@@ -198,7 +209,10 @@ const extractPlayerCardId = (
 		// }
 	}
 
-	return cardId;
+	return {
+		heroCardId: cardId,
+		heroEntityId: +heroEntityId,
+	};
 };
 
 const extractHeroPowerCardId = (

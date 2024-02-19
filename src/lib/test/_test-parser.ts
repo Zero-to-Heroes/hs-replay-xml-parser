@@ -1,10 +1,7 @@
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { parseBattlegroundsGame, parseHsReplayString } from '../xml-parser';
+import { parseHsReplayString } from '../xml-parser';
 // import { xml } from './bgs-game-anomaly.xml';
-import { BgsPostMatchStats } from '../model/bgs-post-match-stats';
-import { Replay } from '../model/replay';
-import { xml } from './big-file.xml';
-import { xml as ranked } from './ranked.xml';
+import { xml } from './bgs-quests.xml';
 
 const test = async () => {
 	const allCards = new AllCardsService();
@@ -13,11 +10,10 @@ const test = async () => {
 	const replay = parseHsReplayString(xml, allCards);
 	console.debug('parseHsReplayString after', Date.now() - start);
 	start = Date.now();
-	const bg = parseBattlegroundsGame(xml, null, [], [], allCards);
-	console.debug('parseBattlegroundsGame after', Date.now() - start);
+	// const bg = parseBattlegroundsGame(xml, null, [], [], allCards);
+	// console.debug('parseBattlegroundsGame after', Date.now() - start);
+	console.debug('quests', replay.bgsHeroQuests);
 	start = Date.now();
-	const replay2 = parseHsReplayString(ranked, allCards);
-	console.debug('parsed after', Date.now() - start);
 	// const bgParsedInfo = parseBattlegroundsGame(xml, null, [], [], allCards);
 	// const mainPlayerCardId = replay.mainPlayerCardId;
 	// console.debug('mainPlayerCardId', mainPlayerCardId);
@@ -31,18 +27,3 @@ const test = async () => {
 };
 
 test();
-
-const isBgPerfectGame = (bgParsedInfo: BgsPostMatchStats, replay: Replay): boolean => {
-	const mainPlayerHpOverTurn = bgParsedInfo.hpOverTurn[replay.mainPlayerId];
-	console.debug('hpOverTurn', bgParsedInfo.hpOverTurn);
-	console.debug('mainPlayerHpOverTurn', mainPlayerHpOverTurn);
-	// Let's use 8 turns as a minimum to be considered a perfect game
-	if (!mainPlayerHpOverTurn?.length || mainPlayerHpOverTurn.length < 8) {
-		return false;
-	}
-
-	const maxHp = Math.max(...mainPlayerHpOverTurn.map((info) => info.value));
-	const startingHp = maxHp;
-	const endHp = mainPlayerHpOverTurn[mainPlayerHpOverTurn.length - 1].value;
-	return endHp === startingHp;
-};
