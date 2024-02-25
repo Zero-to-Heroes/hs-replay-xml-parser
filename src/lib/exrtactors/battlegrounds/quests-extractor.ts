@@ -46,12 +46,46 @@ export const extractHeroQuests = (
 	if (!questCardId?.length) {
 		return [];
 	}
-	const questDifficulty = +elementTree
+	const questDifficulty = elementTree
+		.findall(`.//TagChange[@tag='${GameTag.QUEST_PROGRESS_TOTAL}'][@entity='${pickedQuestEntityId}']`)
+		.filter((t) => t.get('value') != '0')
+		.map((t) => +t.get('value'))[0];
+	const questDifficultyMax = Math.max(
+		...elementTree
+			.findall(`.//TagChange[@tag='${GameTag.QUEST_PROGRESS_TOTAL}'][@entity='${pickedQuestEntityId}']`)
+			.filter((t) => t.get('value') != '0')
+			.map((t) => +t.get('value')),
+	);
+	const questDifficultyOld = +elementTree
 		.findall(`.//TagChange[@tag='${GameTag.QUEST_PROGRESS_TOTAL}'][@entity='${pickedQuestEntityId}']`)
 		.filter((t) => t.get('value') != '0')
 		.pop()
 		?.get('value');
 	// console.log('questCardId=', questCardId, 'questDifficulty=', questDifficulty);
+	// console.log(
+	// 	'difficulties',
+	// 	questOptions.map((option) => {
+	// 		const allDifficulties = elementTree
+	// 			.findall(`.//TagChange[@tag='${GameTag.QUEST_PROGRESS_TOTAL}'][@entity='${option.get('id')}']`)
+	// 			.filter((t) => t.get('value') != '0');
+	// 		console.debug(
+	// 			'allDifficulties',
+	// 			option.get('cardID'),
+	// 			allDifficulties.map((t) => +t.get('value')),
+	// 		);
+	// 		const maxDifficulty = Math.max(...allDifficulties.map((t) => +t.get('value')));
+	// 		const difficulty = +allDifficulties[0]?.get('value');
+	// 		const difficultyOld = +[...allDifficulties].pop()?.get('value');
+	// 		// console.debug('maxDifficulty', maxDifficulty, allDifficulties);
+	// 		return {
+	// 			id: option.get('id'),
+	// 			cardId: option.get('cardID'),
+	// 			difficulty: difficulty,
+	// 			difficultyOld: difficultyOld,
+	// 			maxDifficulty: maxDifficulty,
+	// 		};
+	// 	}),
+	// );
 
 	const questRewardDbfId = +elementTree
 		.find(`.//TagChange[@tag='${GameTag.QUEST_REWARD_DATABASE_ID}'][@entity='${pickedQuestEntityId}']`)
@@ -81,9 +115,11 @@ export const extractHeroQuests = (
 		{
 			questCardId: questCardId,
 			questDifficulty: questDifficulty,
+			questDifficultyMax: questDifficultyMax,
+			questDifficultyOld: questDifficultyOld,
 			rewardCardId: questRewardCardId,
 			turnCompleted: turnsCompleted,
 			isCompleted: isCompleted,
-		},
+		} as any,
 	];
 };
