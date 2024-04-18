@@ -78,10 +78,7 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	);
 	const mainPlayerHeroPowerCardId = extractHeroPowerCardId(mainPlayerId, elementTree, allCards);
 
-	const region: BnetRegion = bigInt(parseInt(mainPlayerElement.get('accountHi')))
-		.shiftRight(32)
-		.and(0xff)
-		.toJSNumber();
+	const region: BnetRegion = extractRegion(mainPlayerElement.get('accountHi'));
 	// console.log('mainPlayer');
 
 	const opponentCandidates = elementTree
@@ -119,7 +116,11 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 
 	const result = extractResult(mainPlayerEntityId, elementTree);
 	// console.log('result');
-	const isBgGame = gameMode === GameType.GT_BATTLEGROUNDS || gameMode === GameType.GT_BATTLEGROUNDS_FRIENDLY;
+	const isBgGame =
+		gameMode === GameType.GT_BATTLEGROUNDS ||
+		gameMode === GameType.GT_BATTLEGROUNDS_FRIENDLY ||
+		gameMode === GameType.GT_BATTLEGROUNDS_DUO ||
+		gameMode === GameType.GT_BATTLEGROUNDS_DUO_FRIENDLY;
 	const additionalResult = isBgGame
 		? '' + extractBgsAdditionalResult(mainPlayerId, mainPlayerCardId, opponentPlayerId, elementTree)
 		: null;
@@ -160,6 +161,10 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	} as Replay);
 };
 
+export const extractRegion = (accountHi: string): BnetRegion => {
+	return bigInt(parseInt(accountHi)).shiftRight(32).and(0xff).toJSNumber();
+};
+
 const extractPlayerCardId = (
 	playerElement: Element,
 	playerEntityId: string,
@@ -172,7 +177,10 @@ const extractPlayerCardId = (
 	let heroEntityId = playerElement.find(`.//Tag[@tag='${GameTag.HERO_ENTITY}']`)?.get('value');
 	// Mercenaries don't have a hero entity id
 	if (!heroEntityId) {
-		return null;
+		return {
+			heroCardId: null,
+			heroEntityId: null,
+		};
 	}
 
 	const heroEntity = elementTree.find(`.//FullEntity[@id='${heroEntityId}']`);

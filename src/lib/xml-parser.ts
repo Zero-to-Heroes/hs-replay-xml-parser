@@ -19,7 +19,7 @@ import { BgsPostMatchStats } from './model/bgs-post-match-stats';
 import { PlayerOpponentElements } from './model/player-opponent-elements';
 import { PlayerOpponentValues } from './model/player-opponent-values';
 import { Replay } from './model/replay';
-import { buildReplayFromXml } from './replay-parser';
+import { buildReplayFromXml, extractRegion } from './replay-parser';
 
 export const parseHsReplayString = (replayString: string, allCards: AllCardsService): Replay => {
 	return buildReplayFromXml(replayString, allCards);
@@ -60,6 +60,8 @@ export const extractAllCardPlayed = (replay: Replay): PlayerOpponentElements => 
 export const extractBgPlayerPick = (replay: Replay): [readonly Element[], Element] => {
 	return heroPickExtractor(replay.replay, replay.mainPlayerId);
 };
+
+export const buildRegion = extractRegion;
 
 export const parseBattlegroundsGame = (
 	replayXml: string,
