@@ -1,7 +1,7 @@
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { parseHsReplayString } from '../xml-parser';
+import { parseBattlegroundsGame, parseHsReplayString } from '../xml-parser';
 // import { xml } from './bgs-game-anomaly.xml';
-import { xml } from './bgs-quests.xml';
+import { xml } from './bg-duos.xml';
 
 const test = async () => {
 	const allCards = new AllCardsService();
@@ -10,8 +10,8 @@ const test = async () => {
 	const replay = parseHsReplayString(xml, allCards);
 	console.debug('parseHsReplayString after', Date.now() - start);
 	start = Date.now();
-	// const bg = parseBattlegroundsGame(xml, null, [], [], allCards);
-	// console.debug('parseBattlegroundsGame after', Date.now() - start);
+	const bg = parseBattlegroundsGame(xml, null, [], [], allCards);
+	console.debug('parseBattlegroundsGame after', Date.now() - start);
 	console.debug('quests', replay.bgsHeroQuests);
 	start = Date.now();
 	// const bgParsedInfo = parseBattlegroundsGame(xml, null, [], [], allCards);

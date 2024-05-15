@@ -93,7 +93,7 @@ export const reparseReplay = (
 		playerIdToCardIdMapping: {},
 	};
 
-	const playerEntities = extractAllPlayerEntities(replay.mainPlayerId, replay.opponentPlayerId, replay.replay);
+	let playerEntities = extractAllPlayerEntities(replay.mainPlayerId, replay.opponentPlayerId, replay.replay);
 	let mainPlayerEntity = replay.replay.find('.//Player[@isMainPlayer="true"]');
 	if (!mainPlayerEntity) {
 		const players = replay.replay.findall('.//Player');
@@ -151,6 +151,8 @@ export const reparseReplay = (
 			};
 		}
 	}
+	playerEntities = playerEntities.filter((e) => e.get('playerId') != null);
+
 	// console.debug('structure playerIdToCardIdMapping', structure.playerIdToCardIdMapping);
 	// console.debug('structure playerHps', structure.playerHps);
 
