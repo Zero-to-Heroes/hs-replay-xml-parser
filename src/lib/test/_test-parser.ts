@@ -1,7 +1,7 @@
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { parseBattlegroundsGame, parseHsReplayString } from '../xml-parser';
-// import { xml } from './bgs-game-anomaly.xml';
-import { xml } from './bg-duos.xml';
+import { xml } from './bg-game-trinkets.xml';
+// import { xml } from './bg-duos.xml';
 
 const test = async () => {
 	const allCards = new AllCardsService();
@@ -12,18 +12,8 @@ const test = async () => {
 	start = Date.now();
 	const bg = parseBattlegroundsGame(xml, null, [], [], allCards);
 	console.debug('parseBattlegroundsGame after', Date.now() - start);
-	console.debug('quests', replay.bgsHeroQuests);
+	console.debug('trinkets', replay.hasBgsTrinkets, replay.bgsHeroTrinkets);
 	start = Date.now();
-	// const bgParsedInfo = parseBattlegroundsGame(xml, null, [], [], allCards);
-	// const mainPlayerCardId = replay.mainPlayerCardId;
-	// console.debug('mainPlayerCardId', mainPlayerCardId);
-	// const bgPerfectGame = isBgPerfectGame(bgParsedInfo, replay);
-	// console.debug('bgPerfectGame', bgPerfectGame);
-	// const parsed = parseBattlegroundsGame(xml, null, [], [], allCards);
-	// console.debug('parsed', bgs.playerIdToCardIdMapping);
-	// const cardsPlayedParser = new ActivePlayerCardsPlayedParser(replay, allCards);
-	// parseGame(replay, [cardsPlayedParser]);
-	// console.debug('cards played by turn', cardsPlayedParser.entitiesPlayedPerTurn.toJS());
 };
 
 test();

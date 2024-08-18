@@ -22,6 +22,8 @@ export class Replay {
 	readonly playCoin: 'play' | 'coin';
 	readonly hasBgsQuests: boolean;
 	readonly bgsHeroQuests: readonly BgsHeroQuest[];
+	readonly hasBgsTrinkets: boolean;
+	readonly bgsHeroTrinkets: readonly BgsHeroTrinket[];
 	readonly hasBgsAnomalies: boolean;
 	readonly bgsAnomalies: readonly string[];
 }
@@ -32,4 +34,9 @@ export interface BgsHeroQuest {
 	readonly rewardCardId: string;
 	readonly isCompleted: boolean;
 	readonly turnCompleted: number;
+}
+
+export interface BgsHeroTrinket {
+	readonly cardId: string;
+	readonly cost: number;
 }
