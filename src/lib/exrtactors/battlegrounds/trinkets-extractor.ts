@@ -13,7 +13,10 @@ export const extractHeroTrinkets = (
 	mainPlayerId: number,
 	playerHeroEntityId: number,
 	allCards: AllCardsService,
-): readonly BgsHeroTrinket[] => {
+): {
+	options: readonly string[];
+	picks: readonly BgsHeroTrinket[];
+} => {
 	let validCreatorDbIds = [CardIds.LesserTrinketToken_BG30_Trinket_1st, CardIds.GreaterTrinket_BG30_Trinket_2nd]
 		.map((id) => allCards.getCard(id)?.dbfId)
 		.filter((id) => !!id);
@@ -61,5 +64,8 @@ export const extractHeroTrinkets = (
 		};
 		return result;
 	});
-	return trinkets;
+	return {
+		options: trinketOptions.map((option) => option?.get('cardID')),
+		picks: trinkets,
+	};
 };

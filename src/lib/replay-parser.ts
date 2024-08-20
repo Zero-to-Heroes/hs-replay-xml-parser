@@ -163,7 +163,8 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 		hasBgsQuests: hasBgsQuests,
 		hasBgsTrinkets: hasBgsTrinkets,
 		bgsHeroQuests: bgsHeroQuests,
-		bgsHeroTrinkets: bgsHeroTrinkets,
+		bgsHeroTrinketsOffered: bgsHeroTrinkets?.options,
+		bgsHeroTrinkets: bgsHeroTrinkets?.picks,
 		hasBgsAnomalies: hasBgsAnomalies,
 		bgsAnomalies: anomalies,
 	} as Replay);

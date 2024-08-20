@@ -12,7 +12,7 @@ const test = async () => {
 	start = Date.now();
 	const bg = parseBattlegroundsGame(xml, null, [], [], allCards);
 	console.debug('parseBattlegroundsGame after', Date.now() - start);
-	console.debug('trinkets', replay.hasBgsTrinkets, replay.bgsHeroTrinkets);
+	console.debug('trinkets', replay.hasBgsTrinkets, replay.bgsHeroTrinkets, replay.bgsHeroTrinketsOffered);
 	start = Date.now();
 };
 
