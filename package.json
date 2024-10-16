@@ -1,6 +1,6 @@
 {
 	"name": "@firestone-hs/hs-replay-xml-parser",
-	"version": "0.0.140",
+	"version": "0.0.141",
 	"description": "",
 	"scripts": {
 		"lint": "eslint --color --fix --ext .ts .",

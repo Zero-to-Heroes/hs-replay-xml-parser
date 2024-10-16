@@ -6,6 +6,8 @@ import { NumericTurnInfo } from './numeric-turn-info';
 import { ValueHeroInfo } from './value-hero-info';
 
 export interface BgsPostMatchStats {
+	readonly heroesOffered: readonly string[];
+
 	readonly tavernTimings: readonly BgsTavernUpgrade[];
 	readonly tripleTimings: readonly BgsTriple[];
 	readonly rerolls: number;

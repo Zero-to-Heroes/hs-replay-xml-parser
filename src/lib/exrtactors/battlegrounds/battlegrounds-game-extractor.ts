@@ -4,7 +4,7 @@ import { BgsFaceOff } from '../../model/bgs-face-off';
 import { BgsPostMatchStats } from '../../model/bgs-post-match-stats';
 import { Replay } from '../../model/replay';
 import { groupByFunction } from '../../utils';
-import { buildLuckFactor, parseHsReplayString } from '../../xml-parser';
+import { buildLuckFactor, extractBgPlayerPick, parseHsReplayString } from '../../xml-parser';
 import { reparseReplay } from './replay-parser';
 
 export const buildPostMatchStats = (
@@ -19,7 +19,9 @@ export const buildPostMatchStats = (
 	const player: BgsPlayer = mainPlayer;
 	const structure = reparseReplay(replay, allCards);
 	const compositionsOverTurn: readonly BgsComposition[] = buildCompositionsOverTurn(player?.boardHistory ?? []);
+	const heroesOffered = extractHeroesOffered(replay);
 	const postMatchStats: BgsPostMatchStats = {
+		heroesOffered: heroesOffered,
 		tavernTimings: player?.tavernUpgradeHistory ?? [],
 		tripleTimings: player?.tripleHistory ?? [], // TODO: add the cards when relevant
 		coinsWastedOverTurn: structure.coinsWastedOverTurn,
@@ -70,6 +72,11 @@ const buildCompositionsOverTurn = (boardHistory: readonly BgsBoard[]): readonly 
 	return boardHistory
 		? boardHistory.map((history) => extractCompositionsForTurn(history)).reduce((a, b) => a.concat(b), [])
 		: [];
+};
+
+const extractHeroesOffered = (replay: Replay): readonly string[] => {
+	const [heroElements, picked] = extractBgPlayerPick(replay);
+	return heroElements.map((entity) => entity.get('cardID'));
 };
 
 // Returns -1 if had the worst possible luck, and 1 if had the best possible luck
