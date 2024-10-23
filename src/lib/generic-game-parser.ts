@@ -1,3 +1,4 @@
+/* eslint-disable no-extra-boolean-cast */
 import { GameTag, PlayState, Step } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { Replay } from './model/replay';
@@ -11,6 +12,7 @@ export const parseGame = (replay: Replay, parsers: readonly Parser[]) => {
 		entities: {},
 		gameEntityId: -1,
 		currentTurn: 0,
+		currentTurns: {},
 		parsers: parsers,
 	};
 	const parserFunctions: readonly ((element: Element) => void)[] = [
@@ -44,11 +46,12 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				),
 			} as any;
 		}
-		if (element.tag === 'FullEntity' || element.tag === 'ShowEntity') {
+		if (element.tag === 'FullEntity' || element.tag === 'ShowEntity' || element.tag === 'Player') {
 			const entityId = element.get('id') || element.get('entity');
 			structure.entities[entityId] = {
 				entityId: parseInt(entityId),
 				cardId: element.get('cardID'),
+				playerId: element.get('playerID') ? +element.get('playerID') : undefined,
 				controller: parseInt(element.find(`.Tag[@tag='${GameTag.CONTROLLER}']`)?.get('value') || '-1'),
 				creatorEntityId: parseInt(element.find(`.Tag[@tag='${GameTag.CREATOR}']`)?.get('value') || '0'),
 				zone: parseInt(element.find(`.Tag[@tag='${GameTag.ZONE}']`)?.get('value') || '-1'),
@@ -103,19 +106,28 @@ const parseElement = (
 	mainPlayerId: number,
 	opponentPlayerEntityId: string,
 	parent: Element,
-	turnCountWrapper,
+	structure: ParsingStructure,
 	parseFunctions: readonly ((element: Element) => void)[],
 	populateFunctions: readonly ((currentTurn: number) => void)[],
 ) => {
 	parseFunctions.forEach((parseFunction) => parseFunction(element));
 	if (element.tag === 'TagChange') {
+		if (parseInt(element.get('tag')) === GameTag.TURN) {
+			const playerEntityId = +element.get('entity');
+			const playerEntity = structure.entities[playerEntityId];
+			if (!!playerEntity?.playerId) {
+				structure.currentTurns = structure.currentTurns ?? {};
+				structure.currentTurns[playerEntity.playerId] = parseInt(element.get('value'));
+			}
+		}
+
 		if (
 			parseInt(element.get('tag')) === GameTag.NEXT_STEP &&
 			parseInt(element.get('value')) === Step.MAIN_START_TRIGGERS
 		) {
 			if (parent && parent.get('entity') === opponentPlayerEntityId) {
-				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
-				turnCountWrapper.currentTurn++;
+				populateFunctions.forEach((populateFunction) => populateFunction(structure.currentTurn));
+				structure.currentTurn++;
 			}
 		}
 		if (
@@ -123,8 +135,8 @@ const parseElement = (
 			[PlayState.WON, PlayState.LOST].indexOf(parseInt(element.get('value'))) !== -1
 		) {
 			if (element.get('entity') === opponentPlayerEntityId) {
-				populateFunctions.forEach((populateFunction) => populateFunction(turnCountWrapper.currentTurn));
-				turnCountWrapper.currentTurn++;
+				populateFunctions.forEach((populateFunction) => populateFunction(structure.currentTurn));
+				structure.currentTurn++;
 			}
 		}
 	}
@@ -137,7 +149,7 @@ const parseElement = (
 				mainPlayerId,
 				opponentPlayerEntityId,
 				element,
-				turnCountWrapper,
+				structure,
 				parseFunctions,
 				populateFunctions,
 			);
@@ -151,12 +163,14 @@ export interface ParsingStructure {
 	};
 	gameEntityId: number;
 	currentTurn: number;
+	currentTurns: { [playerEntityId: number]: number };
 	parsers: readonly Parser[];
 }
 
 export interface ParsingEntity {
 	entityId: number;
 	cardId: string;
+	playerId?: number;
 	controller: number;
 	creatorEntityId: number;
 	zone: number;
