@@ -25,7 +25,7 @@ export const parseGame = (replay: Replay, parsers: readonly Parser[]) => {
 		replay.mainPlayerId,
 		opponentPlayerEntityId,
 		null,
-		{ currentTurn: 0 },
+		structure,
 		parserFunctions,
 		populateFunctions,
 	);
