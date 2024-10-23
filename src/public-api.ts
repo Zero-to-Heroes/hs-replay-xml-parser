@@ -13,4 +13,5 @@ export * from './lib/model/numeric-turn-info';
 export * from './lib/model/player-opponent-values';
 export * from './lib/model/replay';
 export * from './lib/model/value-hero-info';
+export * from './lib/parsers/_barrel';
 export * from './lib/xml-parser';
