@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { BlockType, Zone } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
-import { Parser, ParsingStructure } from '../generic-game-parser';
+import { Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
 export class CardsPlayedByTurnParser implements Parser {
 	public cardsPlayedByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
@@ -13,7 +13,7 @@ export class CardsPlayedByTurnParser implements Parser {
 				return;
 			}
 
-			const entity = structure.entities[element.get('entity')!];
+			const entity: ParsingEntity = structure.entities[element.get('entity')!];
 			const controller = entity?.controller;
 			if (!controller) {
 				return;
@@ -46,6 +46,7 @@ export class CardsPlayedByTurnParser implements Parser {
 				cardId: cardId,
 				turn: turn,
 				entityId: entity.entityId,
+				createdBy: entity.creatorEntityId ? structure.entities[entity.creatorEntityId]?.cardId : null,
 			};
 			cardsPlayedByPlayer.push(cardPlayed);
 		};
@@ -61,4 +62,5 @@ export interface CardPlayedByTurn {
 	readonly cardId: string;
 	readonly turn: number;
 	readonly entityId: number;
+	readonly createdBy: string | null;
 }
