@@ -200,7 +200,16 @@ const extractPlayerCardId = (
 			.findall(`.//TagChange[@tag='${GameTag.HERO_ENTITY}'][@entity='${playerEntityId}']`)
 			.map((tag) => tag.get('value'));
 		const pickedPlayedHero = tagChanges && tagChanges.length > 0 ? tagChanges[0] : null;
-		const newHero = elementTree.findall(`.//FullEntity[@id='${pickedPlayedHero}']`)[0];
+		// Hero rerolls actually trigger a Change_Entity
+		const changeEntities = elementTree.findall(`.//ChangeEntity[@entity='${pickedPlayedHero}']`);
+		const baseEntities = elementTree.findall(`.//FullEntity[@id='${pickedPlayedHero}']`);
+		const newHero =
+			changeEntities.length > 0
+				? changeEntities[changeEntities.length - 1]
+				: baseEntities.length > 0
+				? baseEntities[baseEntities.length - 1]
+				: null;
+		// const newHero = elementTree.findall(`.//FullEntity[@id='${pickedPlayedHero}']`)[0];
 		if (!newHero) {
 			console.warn('Could not identify hero from picks', pickedPlayedHero);
 		} else {

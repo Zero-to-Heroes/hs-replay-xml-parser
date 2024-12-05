@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { BlockType, Zone } from '@firestone-hs/reference-data';
+import { BlockType, GameTag, Zone } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
@@ -35,18 +35,33 @@ export class CardsPlayedByTurnParser implements Parser {
 				cardsPlayedByPlayer = [];
 				this.cardsPlayedByTurn[controller] = cardsPlayedByPlayer;
 			}
+
 			let cardId = entity.cardId ?? element.get('cardID')!;
 			if (!cardId) {
 				cardId =
 					element.find(`.//ShowEntity[@entity='${entity.entityId}']`)?.get('cardID') ??
 					element.find(`.//FullEntity[@id='${entity.entityId}']`)?.get('cardID');
 			}
+
+			let creatorEntityId = entity.creatorEntityId;
+			if (
+				!!element.find(`.//ShowEntity[@entity='${entity.entityId}']`) ||
+				!!element.find(`.//FullEntity[@id='${entity.entityId}']`)
+			) {
+				const entityElement =
+					element.find(`.//ShowEntity[@entity='${entity.entityId}']`) ||
+					element.find(`.//FullEntity[@id='${entity.entityId}']`);
+				const creatorTag = entityElement.find(`.//Tag[@tag="${GameTag.CREATOR}"]`)?.get('value');
+				creatorEntityId = creatorEntityId || parseInt(creatorTag);
+			}
+
 			const turn = structure.currentTurns[controller];
 			const cardPlayed = {
 				cardId: cardId,
 				turn: turn,
 				entityId: entity.entityId,
-				createdBy: entity.creatorEntityId ? structure.entities[entity.creatorEntityId]?.cardId : null,
+				createdBy:
+					creatorEntityId && !isNaN(creatorEntityId) ? structure.entities[creatorEntityId]?.cardId : null,
 			};
 			cardsPlayedByPlayer.push(cardPlayed);
 		};

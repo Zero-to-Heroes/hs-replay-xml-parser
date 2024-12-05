@@ -12,7 +12,13 @@ export const heroPickExtractor = (elementTree: ElementTree, mainPlayerId: number
 				entity.find(`.Tag[@tag='${GameTag.BACON_HERO_CAN_BE_DRAFTED}'][@value='1']`) ||
 				entity.find(`.Tag[@tag='${GameTag.BACON_SKIN}'][@value='1']`),
 		);
+	// Also include the new rerolls
 	const pickOptionIds = pickOptions.map((option) => option?.get('id')) ?? [];
+	const rerolls = elementTree
+		.findall(`.//ChangeEntity`)
+		.filter((entity) => entity.find(`.Tag[@tag='${GameTag.BACON_NUM_MULLIGAN_REFRESH_USED}'][@value='1']`))
+		.filter((entity) => pickOptionIds.includes(entity.get('entity')));
+	const fullPickOptions = [...pickOptions, ...rerolls];
 	// console.log('pickOptionIds', pickOptionIds);
 	const pickedHero = elementTree
 		.findall(`.//ChosenEntities`)
@@ -27,7 +33,9 @@ export const heroPickExtractor = (elementTree: ElementTree, mainPlayerId: number
 		.map((entity) => entity.find(`.//Choice`));
 	// console.log('pickedHero', pickedHero);
 	const pickedHeroEntityId = pickedHero[0]?.get('entity') ?? -1;
-	const pickedHeroFullEntity = pickOptions.find((option) => option?.get('id') === pickedHeroEntityId);
+	const pickedHeroFullEntity = fullPickOptions.find(
+		(option) => option?.get('id') === pickedHeroEntityId || option?.get('entity') === pickedHeroEntityId,
+	);
 
-	return [pickOptions, pickedHeroFullEntity];
+	return [fullPickOptions, pickedHeroFullEntity];
 };

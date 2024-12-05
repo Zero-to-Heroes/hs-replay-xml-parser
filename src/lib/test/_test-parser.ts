@@ -1,8 +1,6 @@
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { parseGame } from '../generic-game-parser';
-import { CardsPlayedByTurnParser } from '../parsers/cards-played-by-turn-parser';
-import { parseHsReplayString } from '../xml-parser';
-import { xml } from './ranked.xml';
+import { parseBattlegroundsGame, parseHsReplayString } from '../xml-parser';
+import { xml } from './bg-reroll.xml';
 // import { xml } from './bg-duos.xml';
 
 const test = async () => {
@@ -11,9 +9,12 @@ const test = async () => {
 	let start = Date.now();
 
 	const replay = parseHsReplayString(xml, allCards);
-	const parser = new CardsPlayedByTurnParser();
-	parseGame(replay, [parser]);
-	console.debug('cards played by turn', parser.cardsPlayedByTurn);
+	console.log('mainPlayerCardId', replay.mainPlayerCardId);
+	const bgGame = parseBattlegroundsGame(xml, null, null, null, allCards);
+	console.log('heroesOffered', bgGame.heroesOffered);
+	// const parser = new CardsPlayedByTurnParser();
+	// parseGame(replay, [parser]);
+	// console.debug('cards played by turn', parser.cardsPlayedByTurn);
 	start = Date.now();
 };
 
