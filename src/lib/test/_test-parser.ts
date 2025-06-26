@@ -13,8 +13,8 @@ const test = async () => {
 	const replay = parseHsReplayString(xml, allCards);
 	const parser = new CardsPlayedByTurnParser();
 	parseGame(replay, [parser]);
-	console.debug('cards played by turn', parser.cardsPlayedByTurn);
-	console.debug('cards cast by turn', parser.cardsCastByTurn);
+	// console.debug('cards played by turn', parser.cardsPlayedByTurn);
+	// console.debug('cards cast by turn', parser.cardsCastByTurn);
 	start = Date.now();
 };
 

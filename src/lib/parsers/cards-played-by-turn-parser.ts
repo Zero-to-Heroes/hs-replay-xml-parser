@@ -113,7 +113,7 @@ export class CardsPlayedByTurnParser implements Parser {
 				continue;
 			}
 
-			const creatorEntityId = +element.find(`.//Tag[@tag="${GameTag.CREATOR}"]`)?.get('value');
+			const creatorEntityId = +ent.find(`.//Tag[@tag="${GameTag.CREATOR}"]`)?.get('value');
 
 			const cardPlayed = {
 				cardId: cardId,
