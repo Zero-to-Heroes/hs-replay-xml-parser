@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
-import { Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
+import { getEntityCardId, Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
 export class CardsPlayedByTurnParser implements Parser {
 	public cardsPlayedByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
@@ -39,7 +39,9 @@ export class CardsPlayedByTurnParser implements Parser {
 			this.cardsPlayedByTurn[controller] = cardsPlayedByPlayer;
 		}
 
-		let cardId = entity.cardId ?? element.get('cardID')!;
+		const turn = structure.currentTurns[controller];
+		const debug = entity.entityId === 40;
+		let cardId = getEntityCardId(entity, turn) ?? element.get('cardID')!;
 		if (!cardId) {
 			cardId =
 				element.find(`.//ShowEntity[@entity='${entity.entityId}']`)?.get('cardID') ??
@@ -61,12 +63,14 @@ export class CardsPlayedByTurnParser implements Parser {
 			creatorEntityId = creatorEntityId || parseInt(creatorTag);
 		}
 
-		const turn = structure.currentTurns[controller];
 		const cardPlayed = {
 			cardId: cardId,
 			turn: turn,
 			entityId: entity.entityId,
-			createdBy: creatorEntityId && !isNaN(creatorEntityId) ? structure.entities[creatorEntityId]?.cardId : null,
+			createdBy:
+				creatorEntityId && !isNaN(creatorEntityId)
+					? getEntityCardId(structure.entities[creatorEntityId], turn)
+					: null,
 		};
 		cardsPlayedByPlayer.push(cardPlayed);
 	};
@@ -153,19 +157,22 @@ export class CardsPlayedByTurnParser implements Parser {
 			this.cardsCastByTurn[controller] = cardsCastByPlayer;
 		}
 
-		const cardId = entity.cardId ?? element.get('cardID')!;
+		const turn = structure.currentTurns[controller];
+		const cardId = getEntityCardId(entity, turn) ?? element.get('cardID')!;
 		if (!cardId) {
 			return;
 		}
 
 		const creatorEntityId = entity.creatorEntityId;
 
-		const turn = structure.currentTurns[controller];
 		const cardPlayed = {
 			cardId: cardId,
 			turn: turn,
 			entityId: entity.entityId,
-			createdBy: creatorEntityId && !isNaN(creatorEntityId) ? structure.entities[creatorEntityId]?.cardId : null,
+			createdBy:
+				creatorEntityId && !isNaN(creatorEntityId)
+					? getEntityCardId(structure.entities[creatorEntityId], turn)
+					: null,
 		};
 		cardsCastByPlayer.push(cardPlayed);
 	};

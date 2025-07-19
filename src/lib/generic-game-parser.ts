@@ -46,7 +46,12 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				),
 			} as any;
 		}
-		if (element.tag === 'FullEntity' || element.tag === 'ShowEntity' || element.tag === 'Player') {
+		if (
+			element.tag === 'FullEntity' ||
+			element.tag === 'ShowEntity' ||
+			element.tag === 'ChangeEntity' ||
+			element.tag === 'Player'
+		) {
 			const entityId = element.get('id') || element.get('entity');
 			structure.entities[entityId] = {
 				entityId: parseInt(entityId),
@@ -67,6 +72,13 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				),
 				summonedInCombat: structure.entities[structure.gameEntityId].boardVisualState === 2,
 			};
+			structure.entities[entityId].cardIdChanges = structure.entities[entityId].cardIdChanges ?? [];
+			structure.entities[entityId].cardIdChanges.push({
+				cardId: element.get('cardID'),
+				turn: structure.currentTurn,
+			});
+			const debug = element.tag === 'ChangeEntity';
+			const debug2 = 2;
 		}
 		if (structure.entities[element.get('entity')]) {
 			if (parseInt(element.get('tag')) === GameTag.CONTROLLER) {
@@ -170,6 +182,7 @@ export interface ParsingStructure {
 export interface ParsingEntity {
 	entityId: number;
 	cardId: string;
+	cardIdChanges?: { cardId: string; turn: number }[];
 	playerId?: number;
 	controller: number;
 	creatorEntityId: number;
@@ -184,6 +197,14 @@ export interface ParsingEntity {
 	boardVisualState: number;
 	summonedInCombat: boolean;
 }
+
+export const getEntityCardId = (entity: ParsingEntity, currentTurn: number) => {
+	const cardIdChanges = entity.cardIdChanges;
+	if (!cardIdChanges) {
+		return entity.cardId;
+	}
+	return cardIdChanges.find((change) => change.turn <= currentTurn)?.cardId ?? entity.cardId;
+};
 
 export interface Parser {
 	parse: (structure: ParsingStructure) => (element: Element) => void;

@@ -1,7 +1,7 @@
 import { AllCardsService, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { Map } from 'immutable';
-import { Parser, ParsingStructure } from '../generic-game-parser';
+import { getEntityCardId, Parser, ParsingStructure } from '../generic-game-parser';
 import { Replay } from '../model/replay';
 
 export interface Card {
@@ -43,16 +43,17 @@ export class ActivePlayerCardsPlayedParser implements Parser {
 				return;
 			}
 
-			if (!this.allCards.getCard(existingEntity.cardId).dbfId) {
-				console.warn('could not find id', existingEntity.cardId);
+			const cardId = getEntityCardId(existingEntity, structure.currentTurn);
+			if (!this.allCards.getCard(cardId).dbfId) {
+				console.warn('could not find id', cardId);
 
-				if (!existingEntity.cardId) {
+				if (!cardId) {
 					console.warn('missing entity card Id', existingEntity);
 				}
 			}
 
 			this.entitiesPlayedThisTurn.push({
-				id: this.allCards.getCard(existingEntity.cardId).dbfId,
+				id: this.allCards.getCard(cardId).dbfId,
 				inInitialDeck: !existingEntity.creatorEntityId,
 			});
 			// console.debug('this.entitiesPlayedThisTurn', this.entitiesPlayedThisTurn);
@@ -60,7 +61,7 @@ export class ActivePlayerCardsPlayedParser implements Parser {
 	};
 
 	populate = (structure: ParsingStructure) => {
-		return currentTurn => {
+		return (currentTurn) => {
 			this.entitiesPlayedPerTurn = this.entitiesPlayedPerTurn.set(currentTurn, this.entitiesPlayedThisTurn);
 			this.entitiesPlayedThisTurn = [];
 		};
