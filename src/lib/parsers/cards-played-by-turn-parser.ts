@@ -3,6 +3,8 @@ import { BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data
 import { Element } from 'elementtree';
 import { getEntityCardId, Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
+const entityIdToDebug = 399;
+
 export class CardsPlayedByTurnParser implements Parser {
 	public cardsPlayedByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
 	// Includes cards played by effects
@@ -40,7 +42,7 @@ export class CardsPlayedByTurnParser implements Parser {
 		}
 
 		const turn = structure.currentTurns[controller];
-		const debug = entity.entityId === 40;
+		const debug = entity.entityId === entityIdToDebug;
 		let cardId = getEntityCardId(entity, turn) ?? element.get('cardID')!;
 		if (!cardId) {
 			cardId =
@@ -118,13 +120,18 @@ export class CardsPlayedByTurnParser implements Parser {
 			}
 
 			const creatorEntityId = +ent.find(`.//Tag[@tag="${GameTag.CREATOR}"]`)?.get('value');
+			const entityId = +ent.get('entity') || +ent.get('id');
+			const debug = entityId === entityIdToDebug;
+			const creatorEntity = structure.entities[creatorEntityId];
 
 			const cardPlayed = {
 				cardId: cardId,
 				turn: turn,
-				entityId: +(ent.get('entity') || ent.get('id')),
+				entityId: entityId,
 				createdBy:
-					creatorEntityId && !isNaN(creatorEntityId) ? structure.entities[creatorEntityId]?.cardId : null,
+					creatorEntityId && !isNaN(creatorEntityId)
+						? getEntityCardId(structure.entities[creatorEntityId], turn) ?? null
+						: null,
 			};
 			cardsCastByPlayer.push(cardPlayed);
 		}
@@ -164,15 +171,14 @@ export class CardsPlayedByTurnParser implements Parser {
 		}
 
 		const creatorEntityId = entity.creatorEntityId;
+		const debug = entity.entityId === entityIdToDebug;
+		const creatorEntity = structure.entities[creatorEntityId];
 
 		const cardPlayed = {
 			cardId: cardId,
 			turn: turn,
 			entityId: entity.entityId,
-			createdBy:
-				creatorEntityId && !isNaN(creatorEntityId)
-					? getEntityCardId(structure.entities[creatorEntityId], turn)
-					: null,
+			createdBy: creatorEntityId && !isNaN(creatorEntityId) ? getEntityCardId(creatorEntity, turn) : null,
 		};
 		cardsCastByPlayer.push(cardPlayed);
 	};

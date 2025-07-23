@@ -53,6 +53,7 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 			element.tag === 'Player'
 		) {
 			const entityId = element.get('id') || element.get('entity');
+			const cardIdChanges = structure.entities[entityId]?.cardIdChanges ?? [];
 			structure.entities[entityId] = {
 				entityId: parseInt(entityId),
 				cardId: element.get('cardID'),
@@ -71,8 +72,8 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 					element.find(`.Tag[@tag='${GameTag.BOARD_VISUAL_STATE}']`)?.get('value') || '0',
 				),
 				summonedInCombat: structure.entities[structure.gameEntityId].boardVisualState === 2,
+				cardIdChanges: cardIdChanges,
 			};
-			structure.entities[entityId].cardIdChanges = structure.entities[entityId].cardIdChanges ?? [];
 			structure.entities[entityId].cardIdChanges.push({
 				cardId: element.get('cardID'),
 				turn: structure.currentTurn,
@@ -199,9 +200,9 @@ export interface ParsingEntity {
 }
 
 export const getEntityCardId = (entity: ParsingEntity, currentTurn: number) => {
-	const cardIdChanges = entity.cardIdChanges;
+	const cardIdChanges = entity?.cardIdChanges;
 	if (!cardIdChanges) {
-		return entity.cardId;
+		return entity?.cardId;
 	}
 	return cardIdChanges.find((change) => change.turn <= currentTurn)?.cardId ?? entity.cardId;
 };
