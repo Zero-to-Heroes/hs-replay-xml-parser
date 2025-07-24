@@ -3,7 +3,7 @@ import { BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data
 import { Element } from 'elementtree';
 import { getEntityCardId, Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
-const entityIdToDebug = 399;
+const entityIdToDebug = 241;
 
 export class CardsPlayedByTurnParser implements Parser {
 	public cardsPlayedByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
@@ -24,6 +24,7 @@ export class CardsPlayedByTurnParser implements Parser {
 			return;
 		}
 
+		const debug = +element.get('entity') == entityIdToDebug;
 		const entity: ParsingEntity = structure.entities[element.get('entity')!];
 		const controller = entity?.controller;
 		if (!controller || controller === -1) {
@@ -42,7 +43,6 @@ export class CardsPlayedByTurnParser implements Parser {
 		}
 
 		const turn = structure.currentTurns[controller];
-		const debug = entity.entityId === entityIdToDebug;
 		let cardId = getEntityCardId(entity, turn) ?? element.get('cardID')!;
 		if (!cardId) {
 			cardId =
@@ -121,7 +121,7 @@ export class CardsPlayedByTurnParser implements Parser {
 
 			const creatorEntityId = +ent.find(`.//Tag[@tag="${GameTag.CREATOR}"]`)?.get('value');
 			const entityId = +ent.get('entity') || +ent.get('id');
-			const debug = entityId === entityIdToDebug;
+			const debug = +entityId == entityIdToDebug;
 			const creatorEntity = structure.entities[creatorEntityId];
 
 			const cardPlayed = {
@@ -171,7 +171,7 @@ export class CardsPlayedByTurnParser implements Parser {
 		}
 
 		const creatorEntityId = entity.creatorEntityId;
-		const debug = entity.entityId === entityIdToDebug;
+		const debug = +entity.entityId == entityIdToDebug;
 		const creatorEntity = structure.entities[creatorEntityId];
 
 		const cardPlayed = {

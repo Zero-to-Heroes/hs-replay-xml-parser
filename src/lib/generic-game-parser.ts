@@ -204,7 +204,8 @@ export const getEntityCardId = (entity: ParsingEntity, currentTurn: number) => {
 	if (!cardIdChanges) {
 		return entity?.cardId;
 	}
-	return cardIdChanges.find((change) => change.turn <= currentTurn)?.cardId ?? entity.cardId;
+	// Take the last one
+	return [...cardIdChanges].reverse().find((change) => change.turn <= currentTurn)?.cardId ?? entity.cardId;
 };
 
 export interface Parser {
