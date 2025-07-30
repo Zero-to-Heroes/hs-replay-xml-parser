@@ -54,12 +54,14 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 		) {
 			const entityId = element.get('id') || element.get('entity');
 			const cardIdChanges = structure.entities[entityId]?.cardIdChanges ?? [];
+			const creatorEntityId = parseInt(element.find(`.Tag[@tag='${GameTag.CREATOR}']`)?.get('value') || '0');
 			structure.entities[entityId] = {
 				entityId: parseInt(entityId),
 				cardId: element.get('cardID'),
 				playerId: element.get('playerID') ? +element.get('playerID') : undefined,
 				controller: parseInt(element.find(`.Tag[@tag='${GameTag.CONTROLLER}']`)?.get('value') || '-1'),
-				creatorEntityId: parseInt(element.find(`.Tag[@tag='${GameTag.CREATOR}']`)?.get('value') || '0'),
+				creatorEntityId: creatorEntityId,
+				creatorCardId: getEntityCardId(structure.entities[creatorEntityId], structure.currentTurn),
 				zone: parseInt(element.find(`.Tag[@tag='${GameTag.ZONE}']`)?.get('value') || '-1'),
 				zonePosition: parseInt(element.find(`.Tag[@tag='${GameTag.ZONE_POSITION}']`)?.get('value') || '-1'),
 				cardType: parseInt(element.find(`.Tag[@tag='${GameTag.CARDTYPE}']`)?.get('value') || '-1'),
@@ -87,6 +89,10 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 			}
 			if (parseInt(element.get('tag')) === GameTag.CREATOR) {
 				structure.entities[element.get('entity')].creatorEntityId = parseInt(element.get('value'));
+				structure.entities[element.get('entity')].creatorCardId = getEntityCardId(
+					structure.entities[element.get('entity')],
+					structure.currentTurn,
+				);
 			}
 			if (parseInt(element.get('tag')) === GameTag.ZONE) {
 				structure.entities[element.get('entity')].zone = parseInt(element.get('value'));
@@ -187,6 +193,7 @@ export interface ParsingEntity {
 	playerId?: number;
 	controller: number;
 	creatorEntityId: number;
+	creatorCardId: string;
 	zone: number;
 	zonePosition: number;
 	cardType: number;
@@ -205,7 +212,13 @@ export const getEntityCardId = (entity: ParsingEntity, currentTurn: number) => {
 		return entity?.cardId;
 	}
 	// Take the last one
-	return [...cardIdChanges].reverse().find((change) => change.turn <= currentTurn)?.cardId ?? entity.cardId;
+	return (
+		[...cardIdChanges]
+			.reverse()
+			// Sometimes there is an "undefined" value there, before we actually know the card
+			.filter((c) => !!c.cardId)
+			.find((change) => change.turn <= currentTurn)?.cardId ?? entity.cardId
+	);
 };
 
 export interface Parser {

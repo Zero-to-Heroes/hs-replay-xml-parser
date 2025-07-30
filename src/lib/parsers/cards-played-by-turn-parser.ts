@@ -3,7 +3,7 @@ import { BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data
 import { Element } from 'elementtree';
 import { getEntityCardId, Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
-const entityIdToDebug = 241;
+const entityIdToDebug = 212;
 
 export class CardsPlayedByTurnParser implements Parser {
 	public cardsPlayedByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
@@ -70,9 +70,10 @@ export class CardsPlayedByTurnParser implements Parser {
 			turn: turn,
 			entityId: entity.entityId,
 			createdBy:
-				creatorEntityId && !isNaN(creatorEntityId)
+				entity.creatorCardId ??
+				(creatorEntityId && !isNaN(creatorEntityId)
 					? getEntityCardId(structure.entities[creatorEntityId], turn)
-					: null,
+					: null),
 		};
 		cardsPlayedByPlayer.push(cardPlayed);
 	};
@@ -178,7 +179,9 @@ export class CardsPlayedByTurnParser implements Parser {
 			cardId: cardId,
 			turn: turn,
 			entityId: entity.entityId,
-			createdBy: creatorEntityId && !isNaN(creatorEntityId) ? getEntityCardId(creatorEntity, turn) : null,
+			createdBy:
+				entity.creatorCardId ??
+				(creatorEntityId && !isNaN(creatorEntityId) ? getEntityCardId(creatorEntity, turn) : null),
 		};
 		cardsCastByPlayer.push(cardPlayed);
 	};
