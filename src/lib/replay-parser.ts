@@ -279,6 +279,13 @@ const extractHeroPowerCardId = (
 };
 
 const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): string => {
+	const concedeChanges = elementTree.findall(
+		`.//TagChange[@tag='${GameTag.TAG_PLAYER_CONCEDED_OR_DISCONNECTED}'][@value='1']`,
+	);
+	if (concedeChanges?.length) {
+		return 'lost';
+	}
+
 	const winChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WON}']`);
 	if (winChanges?.length) {
 		// Because mercenaries introduce another player that mimics the main player, but with another
