@@ -2,7 +2,7 @@ import { AllCardsService } from '@firestone-hs/reference-data';
 import { parseGame } from '../generic-game-parser';
 import { CardsPlayedByTurnParser } from '../parsers/cards-played-by-turn-parser';
 import { parseHsReplayString } from '../xml-parser';
-import { xml } from './bg-concede.xml';
+import { xml } from './concede.xml';
 // import { xml } from './bg-duos.xml';
 
 const test = async () => {

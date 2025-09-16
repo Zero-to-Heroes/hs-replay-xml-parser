@@ -283,7 +283,7 @@ const extractResult = (mainPlayerEntityId: string, elementTree: ElementTree): st
 		`.//TagChange[@tag='${GameTag.TAG_PLAYER_CONCEDED_OR_DISCONNECTED}'][@value='1']`,
 	);
 	if (concedeChanges?.length) {
-		return 'lost';
+		return concedeChanges.some((change) => mainPlayerEntityId === change.get('entity')) ? 'lost' : 'won';
 	}
 
 	const winChanges = elementTree.findall(`.//TagChange[@tag='${GameTag.PLAYSTATE}'][@value='${PlayState.WON}']`);
