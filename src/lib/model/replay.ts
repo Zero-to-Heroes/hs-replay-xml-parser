@@ -23,6 +23,7 @@ export class Replay {
 	readonly hasBgsQuests: boolean;
 	readonly bgsHeroQuests: readonly BgsHeroQuest[];
 	readonly hasBgsTrinkets: boolean;
+	readonly hasBgsTimewarped: boolean;
 	readonly bgsHeroTrinkets: readonly BgsHeroTrinket[];
 	readonly bgsHeroTrinketsOffered: readonly string[];
 	readonly hasBgsAnomalies: boolean;

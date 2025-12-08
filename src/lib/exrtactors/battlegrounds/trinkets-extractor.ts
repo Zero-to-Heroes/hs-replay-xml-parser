@@ -8,6 +8,15 @@ export const extractHasBgsTrinkets = (elementTree: ElementTree): boolean => {
 	);
 };
 
+export const extractHasBgsTimewarped = (elementTree: ElementTree): boolean => {
+	return (
+		elementTree
+			.find('.//GameEntity')
+			.find(`.//Tag[@tag='${GameTag.BACON_ALT_TAVERN_SYSTEM_ACTIVE}']`)
+			?.get('value') === '1'
+	);
+};
+
 export const extractHeroTrinkets = (
 	elementTree: ElementTree,
 	mainPlayerId: number,

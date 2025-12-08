@@ -13,7 +13,11 @@ import { Element, ElementTree, parse } from 'elementtree';
 import { extractAnomalies, extractHasBgsAnomalies } from './exrtactors/battlegrounds/anomalies-extractor';
 import { heroPickExtractor } from './exrtactors/battlegrounds/hero-pick-extractor';
 import { extractHasBgsQuests, extractHeroQuests } from './exrtactors/battlegrounds/quests-extractor';
-import { extractHasBgsTrinkets, extractHeroTrinkets } from './exrtactors/battlegrounds/trinkets-extractor';
+import {
+	extractHasBgsTimewarped,
+	extractHasBgsTrinkets,
+	extractHeroTrinkets,
+} from './exrtactors/battlegrounds/trinkets-extractor';
 import { Replay } from './model/replay';
 
 const INNKEEPER_NAMES = [
@@ -131,6 +135,7 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 	// BG-specific stuff
 	const hasBgsQuests = isBgGame ? extractHasBgsQuests(elementTree) : null;
 	const hasBgsTrinkets = isBgGame ? extractHasBgsTrinkets(elementTree) : null;
+	const hasBgsTimewarped = isBgGame ? extractHasBgsTimewarped(elementTree) : null;
 	const bgsHeroQuests =
 		isBgGame && hasBgsQuests ? extractHeroQuests(elementTree, mainPlayerId, playerHeroEntityId, allCards) : null;
 	const bgsHeroTrinkets =
@@ -162,6 +167,7 @@ export const buildReplayFromXml = (replayString: string, allCards: AllCardsServi
 		playCoin: playCoin,
 		hasBgsQuests: hasBgsQuests,
 		hasBgsTrinkets: hasBgsTrinkets,
+		hasBgsTimewarped: hasBgsTimewarped,
 		bgsHeroQuests: bgsHeroQuests,
 		bgsHeroTrinketsOffered: bgsHeroTrinkets?.options,
 		bgsHeroTrinkets: bgsHeroTrinkets?.picks,
