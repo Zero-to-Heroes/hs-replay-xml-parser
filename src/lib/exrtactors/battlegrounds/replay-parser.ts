@@ -771,7 +771,7 @@ const compositionForTurnParse = (structure: ParsingStructure, allCards: AllCards
 				divineShield: parseInt(element.find(`.Tag[@tag='${GameTag.DIVINE_SHIELD}']`)?.get('value') || '0'),
 				poisonous: parseInt(element.find(`.Tag[@tag='${GameTag.POISONOUS}']`)?.get('value') || '0'),
 				reborn: parseInt(element.find(`.Tag[@tag='${GameTag.REBORN}']`)?.get('value') || '0'),
-				tags: Map(
+				tags: Object.fromEntries(
 					element
 						.findall('.Tag')
 						.map((tag) => [GameTag[parseInt(tag.get('tag'))], parseInt(tag.get('value'))]),
@@ -815,10 +815,10 @@ const compositionForTurnParse = (structure: ParsingStructure, allCards: AllCards
 			if (parseInt(element.get('tag')) === GameTag.REBORN) {
 				structure.entities[element.get('entity')].reborn = parseInt(element.get('value'));
 			}
-			structure.entities[element.get('entity')].tags = structure.entities[element.get('entity')].tags.set(
-				GameTag[parseInt(element.get('tag'))],
-				parseInt(element.get('value')),
-			);
+			structure.entities[element.get('entity')].tags = {
+				...structure.entities[element.get('entity')].tags,
+				[GameTag[parseInt(element.get('tag'))]]: parseInt(element.get('value')),
+			};
 		}
 	};
 };

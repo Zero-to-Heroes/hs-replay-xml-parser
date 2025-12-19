@@ -1,5 +1,3 @@
-import { Map } from 'immutable';
-
 export interface BattleResultHistory {
 	readonly turn: number;
 	readonly simulationResult: BgsBattleSimulationResult;
@@ -61,5 +59,5 @@ export interface Entity {
 	readonly id: number;
 	readonly cardID: string;
 	readonly damageForThisAction: number;
-	readonly tags: Map<string, number>;
+	readonly tags: { [tagName: string]: number };
 }

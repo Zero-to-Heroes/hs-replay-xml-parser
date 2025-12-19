@@ -55,13 +55,7 @@ export const buildPostMatchStats = (
 const buildCompositionsOverTurn = (boardHistory: readonly BgsBoard[]): readonly BgsComposition[] => {
 	const extractCompositionsForTurn = (board: BgsBoard): readonly BgsComposition[] => {
 		const groupedByTribe: { [tribe: string]: readonly Entity[] } = groupByFunction(
-			(entity: Entity) =>
-				'' +
-				GameTag[
-					entity.tags.get
-						? entity.tags.get(GameTag[GameTag.CARDRACE])
-						: entity.tags[GameTag[GameTag.CARDRACE]]
-				],
+			(entity: Entity) => '' + entity.tags[GameTag[GameTag.CARDRACE]],
 		)(board.board);
 		return Object.keys(groupedByTribe).map((tribe) => ({
 			turn: board.turn,

@@ -24,7 +24,7 @@ export interface ParsingStructure {
 			divineShield: number;
 			poisonous: number;
 			reborn: number;
-			tags: Map<string, number>;
+			tags: { [tagName: string]: number };
 		};
 	};
 	playerIdToCardIdMapping: { [playerId: string]: string };
