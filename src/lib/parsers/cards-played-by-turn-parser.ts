@@ -1,20 +1,23 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
+import { AllCardsService, BlockType, CardType, GameTag, Zone } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { getEntityCardId, Parser, ParsingEntity, ParsingStructure } from '../generic-game-parser';
 
-const entityIdToDebug = 212;
+const entityIdToDebug = 2568;
 
 export class CardsPlayedByTurnParser implements Parser {
 	public cardsPlayedByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
 	// Includes cards played by effects
 	public cardsCastByTurn: { [playedId: string]: CardPlayedByTurn[] } = {};
 
+	constructor(private readonly allCards: AllCardsService) { }
+
 	parse = (structure: ParsingStructure) => {
 		return (element: Element) => {
 			this.parsePlay(structure, element);
 			this.parseCast(structure, element);
 			this.parseCastTagChange(structure, element);
+			this.parseCastWhenBought(structure, element);
 		};
 	};
 
@@ -83,9 +86,12 @@ export class CardsPlayedByTurnParser implements Parser {
 			element.tag === 'Block' &&
 			(parseInt(element.get('type')!) === BlockType.TRIGGER ||
 				parseInt(element.get('type')!) === BlockType.POWER);
+		const debug = +element.get('entity') == entityIdToDebug;
+		// debug && console.debug('isBlockTrigger', isBlockTrigger, element.get('entity'));
 		if (!isBlockTrigger) {
 			return;
 		}
+
 
 		const entity: ParsingEntity = structure.entities[element.get('entity')!];
 		const controller = entity?.controller;
@@ -172,7 +178,6 @@ export class CardsPlayedByTurnParser implements Parser {
 		}
 
 		const creatorEntityId = entity.creatorEntityId;
-		const debug = +entity.entityId == entityIdToDebug;
 		const creatorEntity = structure.entities[creatorEntityId];
 
 		const cardPlayed = {
@@ -186,9 +191,58 @@ export class CardsPlayedByTurnParser implements Parser {
 		cardsCastByPlayer.push(cardPlayed);
 	};
 
+	parseCastWhenBought = (structure: ParsingStructure, element: Element) => {
+		const isChosenEntities = element.tag === 'ChosenEntities';
+		if (!isChosenEntities) {
+			return;
+		}
+
+		const choices = element.findall('.//Choice');
+		if (choices.length !== 1) {
+			return;
+		}
+
+		const choice = choices[0];
+		const entityId = choice.get('entity');
+		if (!entityId) {
+			return;
+		}
+
+		const entity: ParsingEntity = structure.entities[entityId];
+		const cardId = entity.cardId;
+		const isCastWhenBought = this.allCards.getCard(cardId)?.mechanics?.includes('CASTS_WHEN_BOUGHT');
+		if (!isCastWhenBought) {
+			return;
+		}
+
+		// Looks like this is the entity id, not the player id
+		const playerEntityId = element.get('playerID');
+		const controllerEntity = structure.entities[playerEntityId];
+		if (!controllerEntity) {
+			return;
+		}
+
+		// Now find the player with this id
+		const controller = controllerEntity.controller;
+		let cardsPlayedByPlayer = this.cardsPlayedByTurn[controller];
+		const turn = structure.currentTurns[controller];
+		if (!cardsPlayedByPlayer) {
+			cardsPlayedByPlayer = [];
+			this.cardsPlayedByTurn[controller] = cardsPlayedByPlayer;
+		}
+
+		const cardPlayed = {
+			cardId: cardId,
+			turn: turn,
+			entityId: entity.entityId,
+			createdBy: null,
+		};
+		cardsPlayedByPlayer.push(cardPlayed);
+	};
+
 	populate = (structure: ParsingStructure) => {
 		// eslint-disable-next-line @typescript-eslint/no-empty-function
-		return (currentTurn) => {};
+		return (currentTurn) => { };
 	};
 }
 
