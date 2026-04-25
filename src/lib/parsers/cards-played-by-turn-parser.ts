@@ -115,6 +115,11 @@ export class CardsPlayedByTurnParser implements Parser {
 				continue;
 			}
 
+			const cardType = +ent.find(`.//Tag[@tag="${GameTag.CARDTYPE}"]`)?.get('value');
+			if (cardType !== CardType.SPELL) {
+				continue;
+			}
+
 			let cardsCastByPlayer = this.cardsCastByTurn[controller];
 			if (!cardsCastByPlayer) {
 				cardsCastByPlayer = [];
