@@ -261,7 +261,12 @@ const extractHeroPowerCardId = (
 				e.find(`.Tag[@tag='${GameTag.CONTROLLER}'][@value='${playerId}']`),
 		);
 	// We want the starting hero power only
-	const startingHeroPowerElement = heroPowerElements[0];
+	// CAUTION: in case of dual class arena however, this doesn't work, as the "normal" hero power
+	// is still created in game, and replaced right away
+	const startingHeroPowerElement =
+		// Dual class hero powers are created by the Game itself
+		heroPowerElements.find((e) => e.find(`.Tag[@tag='${GameTag.CREATOR}']`)?.get('value') === '1') ??
+		heroPowerElements[0];
 	// Mercenaries don't have a hero power
 	if (!startingHeroPowerElement) {
 		return null;
