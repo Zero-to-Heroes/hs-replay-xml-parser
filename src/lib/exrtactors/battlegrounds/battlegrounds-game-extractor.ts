@@ -15,6 +15,9 @@ export const buildPostMatchStats = (
 	allCards: AllCardsService,
 ): BgsPostMatchStats => {
 	const replay: Replay = parseHsReplayString(replayXml, allCards);
+	if (!replay?.replay) {
+		return null;
+	}
 	// console.log('parsed replay', replayXml?.length);
 	const player: BgsPlayer = mainPlayer;
 	const structure = reparseReplay(replay, allCards);
@@ -69,6 +72,9 @@ const buildCompositionsOverTurn = (boardHistory: readonly BgsBoard[]): readonly 
 };
 
 const extractHeroesOffered = (replay: Replay): readonly string[] => {
+	if (!replay?.replay) {
+		return [];
+	}
 	const [heroElements, picked] = extractBgPlayerPick(replay);
 	return heroElements.map((entity) => entity.get('cardID'));
 };

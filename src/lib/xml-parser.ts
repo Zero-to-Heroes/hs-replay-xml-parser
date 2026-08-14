@@ -58,6 +58,9 @@ export const extractAllCardPlayed = (replay: Replay): PlayerOpponentElements => 
 };
 
 export const extractBgPlayerPick = (replay: Replay): [readonly Element[], Element] => {
+	if (!replay?.replay) {
+		return [[], null];
+	}
 	return heroPickExtractor(replay.replay, replay.mainPlayerId);
 };
 
